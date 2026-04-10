@@ -1,28 +1,29 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgwc9J_FfTLk82xkcx5PEQSm4Vp9Ktc8do7sziVoWq1c_xicVssarvkssZvB92O7daFA/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgwc9J_FfTLk82xkcx5PEQSm4Vp9Ktc8do7sziVoWq1c_xicVssarvkssZvB92O7daFA/exec"; // REEMPLAZA ESTO
 let inventario = [];
 
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
-    syncBtn.innerText = "⏳";
+    if (syncBtn) syncBtn.innerText = "⏳";
     
     try {
         const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
         
-        if (data) {
+        if (data && data.length > 0) {
             inventario = data;
             localStorage.setItem('inventario', JSON.stringify(inventario));
             renderInventario();
         }
-        syncBtn.innerText = "🔄";
+        if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) {
-        console.error("Error:", e);
-        syncBtn.innerText = "❌";
+        console.error("Error cargando datos:", e);
+        if (syncBtn) syncBtn.innerText = "❌";
     }
 }
 
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
+    if (!lista) return;
     lista.innerHTML = '';
     
     inventario.forEach(p => {
@@ -49,30 +50,35 @@ function renderInventario() {
 function filtrarProductos() {
     const texto = document.getElementById('busqueda').value.toLowerCase();
     const items = document.querySelectorAll('#lista-inventario li');
-
     items.forEach(item => {
-        const nombre = item.textContent.toLowerCase();
-        item.style.display = nombre.includes(texto) ? 'flex' : 'none';
+        const contenido = item.textContent.toLowerCase();
+        item.style.display = contenido.includes(texto) ? 'flex' : 'none';
     });
 }
 
 function switchTab(tab) {
-    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
-    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-    
-    if(tab === 'inventario') {
-        document.getElementById('sec-inventario').style.display = 'block';
-        document.getElementById('tab-inv').classList.add('active');
+    const secInv = document.getElementById('sec-inventario');
+    const secVen = document.getElementById('sec-ventas');
+    const btnInv = document.getElementById('tab-inv');
+    const btnVen = document.getElementById('tab-ven');
+
+    if (tab === 'inventario') {
+        secInv.style.display = 'block';
+        secVen.style.display = 'none';
+        btnInv.classList.add('active');
+        btnVen.classList.remove('active');
     } else {
-        document.getElementById('sec-ventas').style.display = 'block';
-        document.getElementById('tab-ven').classList.add('active');
+        secInv.style.display = 'none';
+        secVen.style.display = 'block';
+        btnInv.classList.remove('active');
+        btnVen.classList.add('active');
         actualizarSelect();
     }
 }
 
 function actualizarSelect() {
     const select = document.getElementById('select-producto');
-    // Mostramos todos para poder seleccionar, indicando stock
+    if (!select) return;
     select.innerHTML = inventario.map(p => 
         `<option value="${p.filaOriginal}">${p.nombre} (${p.stock} disp.)</option>`
     ).join('');
@@ -88,16 +94,12 @@ async function registrarVenta() {
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            body: JSON.stringify({ 
-                action: "venta", 
-                fila: parseInt(fila), 
-                cantidad: cantidad 
-            })
+            body: JSON.stringify({ action: "venta", fila: parseInt(fila), cantidad: cantidad })
         });
-        alert("¡Venta exitosa! El stock en el Excel se está actualizando.");
+        alert("Venta enviada al Excel correctamente.");
         cargarDesdeDrive(); 
     } catch (e) {
-        alert("Error al registrar venta");
+        alert("Error al conectar con el servidor.");
     }
 }
 
