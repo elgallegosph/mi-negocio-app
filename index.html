@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Negocio - Gestión</title>
+    <title>Gestión Negocio - Treinta Clone</title>
+    <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
 </head>
 <body>
     <div class="app-container">
@@ -12,7 +14,7 @@
             <h1>Mi Negocio</h1>
             <div class="balance-card">
                 <span>Balance Total</span>
-                <h2 id="total-balance">$0.00</h2>
+                <h2 id="total-balance">$0</h2>
                 <div class="summary">
                     <div class="income">↑ <span id="total-income">$0</span></div>
                     <div class="expense">↓ <span id="total-expense">$0</span></div>
@@ -27,7 +29,10 @@
             </div>
 
             <section class="history">
-                <h3>Movimientos Recientes</h3>
+                <div class="history-header">
+                    <h3>Movimientos</h3>
+                    <button onclick="cargarDesdeDrive()" id="sync-btn">🔄 Sincronizar</button>
+                </div>
                 <ul id="transaction-list"></ul>
             </section>
         </main>
@@ -36,7 +41,7 @@
     <div id="modal" class="modal">
         <div class="modal-content">
             <h3 id="modal-title">Registrar</h3>
-            <input type="text" id="desc" placeholder="Descripción (ej. Venta de café)">
+            <input type="text" id="desc" placeholder="Descripción (ej. Venta)">
             <input type="number" id="amount" placeholder="Monto $">
             <div class="modal-buttons">
                 <button onclick="closeModal()" class="btn-cancel">Cancelar</button>
