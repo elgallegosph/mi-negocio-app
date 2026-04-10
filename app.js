@@ -1,17 +1,14 @@
-// CONFIGURACIÓN: Pega aquí la URL de tu Google Apps Script
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUnzIdsVbBE5sw0w5avtLpvJ1A7pGqRgqM32tSO7q0jcVVsqT1QWNmTMdQJVoAa6pxgw/exec";
+const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT_AQUI";
 
 let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
 let currentType = 'ingreso';
 
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
-    syncBtn.innerText = "Sincronizando...";
-    
+    syncBtn.innerText = "⏳";
     try {
         const respuesta = await fetch(SCRIPT_URL);
         const filas = await respuesta.json();
-        
         if (filas.length > 1) {
             transactions = filas.slice(1).map(fila => ({
                 id: Date.now() + Math.random(),
@@ -23,11 +20,10 @@ async function cargarDesdeDrive() {
             localStorage.setItem('transactions', JSON.stringify(transactions));
             updateUI();
         }
-        syncBtn.innerText = "🔄 Sincronizar";
+        syncBtn.innerText = "🔄";
     } catch (e) {
-        console.error(e);
-        syncBtn.innerText = "❌ Error";
-        setTimeout(() => syncBtn.innerText = "🔄 Sincronizar", 3000);
+        syncBtn.innerText = "❌";
+        setTimeout(() => syncBtn.innerText = "🔄", 3000);
     }
 }
 
@@ -46,7 +42,6 @@ function closeModal() {
 async function saveTransaction() {
     const desc = document.getElementById('desc').value;
     const amount = document.getElementById('amount').value;
-
     if (!desc || !amount) return alert('Completa los datos');
 
     const nueva = {
@@ -56,7 +51,6 @@ async function saveTransaction() {
         tipo: currentType
     };
 
-    // Guardar Local
     transactions.unshift({
         id: Date.now(),
         desc: nueva.desc,
@@ -69,16 +63,27 @@ async function saveTransaction() {
     updateUI();
     closeModal();
 
-    // Enviar a Drive
     try {
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             body: JSON.stringify(nueva)
         });
-    } catch (e) {
-        console.log("Guardado local. Se subirá al Drive en la próxima sincronización.");
+    } catch (e) { console.log("Offline: Guardado local"); }
+}
+
+function confirmarLimpieza() {
+    if (confirm("¿Borrar todo el historial local? (No afecta al Excel)")) {
+        transactions = [];
+        localStorage.removeItem('transactions');
+        updateUI();
     }
+}
+
+function eliminarUno(id) {
+    transactions = transactions.filter(t => t.id !== id);
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+    updateUI();
 }
 
 function updateUI() {
@@ -94,14 +99,14 @@ function updateUI() {
         const li = document.createElement('li');
         const isInc = t.type === 'ingreso';
         li.innerHTML = `
-            <div>
+            <div style="flex-grow:1">
                 <strong>${t.desc}</strong><br>
-                <small style="color: #999;">${t.fecha || ''}</small>
+                <small style="color:#999">${t.fecha || ''}</small>
             </div>
             <span class="${isInc ? 'income' : 'expense'}">${isInc ? '+' : '-'} $${t.amount.toLocaleString()}</span>
+            <button class="btn-delete-item" onclick="eliminarUno(${t.id})">×</button>
         `;
         list.appendChild(li);
-
         if (isInc) { inc += t.amount; total += t.amount; }
         else { exp += t.amount; total -= t.amount; }
     });
@@ -112,9 +117,7 @@ function updateUI() {
 }
 
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js');
-    });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
 }
 
 window.onload = () => {
