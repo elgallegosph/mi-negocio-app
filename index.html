@@ -12,6 +12,10 @@
     <div class="app-container">
         <header>
             <h1>Amare Beauty</h1>
+            <div class="total-ventas-banner">
+                <small>VENTA TOTAL ACUMULADA</small>
+                <h2 id="gran-total-dinero">$0</h2>
+            </div>
             <nav class="tabs">
                 <button onclick="switchTab('inventario')" id="tab-inv" class="active">Inventario</button>
                 <button onclick="switchTab('ventas')" id="tab-ven">Ventas</button>
@@ -38,12 +42,13 @@
                     <button onclick="registrarVenta()" class="btn-save">REGISTRAR VENTA</button>
                 </div>
                 <hr>
-                <h3>Movimientos Recientes</h3>
-                <ul id="lista-ventas-historial"></ul>
+                <h3>Estado de Ventas</h3>
+                <div id="resumen-cantidades" style="padding: 0 20px; font-size: 14px; color: #666;">
+                    Cargando resumen...
+                </div>
             </section>
         </main>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>
