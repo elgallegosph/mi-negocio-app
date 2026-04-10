@@ -4,23 +4,20 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzd_BeeJgPJFIgtQ3oEl
 let inventario = [];
 
 /**
- * Carga los datos desde el Excel (Forzando actualización)
+ * Carga los datos desde el Excel (Fila 3 en adelante)
  */
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
     if (syncBtn) syncBtn.innerText = "⏳";
     
     try {
-        // El parámetro Math.random() asegura que NO use datos viejos
-        const res = await fetch(SCRIPT_URL + "?t=" + Math.random());
+        const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
         
         if (data && data.length > 0) {
             inventario = data;
-            // Guardamos en el navegador
             localStorage.setItem('inventario', JSON.stringify(inventario));
             renderInventario();
-            console.log("Datos frescos cargados desde el Excel");
         }
         if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) {
@@ -30,7 +27,7 @@ async function cargarDesdeDrive() {
 }
 
 /**
- * Muestra los productos con la cantidad de la Columna D
+ * Lógica de visualización: Muestra cantidad física o estado de Columna M
  */
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
@@ -41,20 +38,24 @@ function renderInventario() {
     inventario.forEach(p => {
         const li = document.createElement('li');
         
-        // Convertimos a número lo que viene del Excel (Columna D)
-        const stockFisico = Number(p.stock); 
+        // Datos del Excel
+        const cantInicial = parseFloat(p.stock) || 0; // Columna D
+        const cantVendida = parseFloat(p.vendidos) || 0; // Columna K
+        const estadoStock = p.estado || "SIN STOCK"; // Columna M
         
-        // Si el número es mayor a 0, mostramos "Cant", si no "SIN STOCK"
-        const tieneStock = !isNaN(stockFisico) && stockFisico > 0;
-        
+        // CONDICIÓN: Si lo vendido alcanza o supera la cantidad inicial, mostrar Columna M
+        // De lo contrario, mostrar la cantidad física disponible.
+        const mostrarEstado = (cantVendida >= cantInicial);
+        const stockActual = cantInicial - cantVendida;
+
         li.innerHTML = `
             <div style="flex-grow:1">
                 <strong>${p.nombre}</strong>
                 <small>SKU: ${p.sku || 'N/A'}</small>
             </div>
             <div style="text-align:right">
-                <span class="stock-badge ${tieneStock ? 'bg-ok' : 'bg-empty'}">
-                    ${tieneStock ? 'Cant: ' + stockFisico : 'SIN STOCK'}
+                <span class="stock-badge ${mostrarEstado ? 'bg-empty' : 'bg-ok'}">
+                    ${mostrarEstado ? estadoStock : 'Cant: ' + stockActual}
                 </span><br>
                 <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
             </div>
@@ -64,7 +65,7 @@ function renderInventario() {
 }
 
 /**
- * Buscador de productos
+ * Buscador en tiempo real
  */
 function filtrarProductos() {
     const texto = document.getElementById('busqueda').value.toLowerCase();
@@ -77,7 +78,7 @@ function filtrarProductos() {
 }
 
 /**
- * Navegación entre Inventario y Ventas
+ * Control de navegación por pestañas
  */
 function switchTab(tab) {
     const secInv = document.getElementById('sec-inventario');
@@ -90,7 +91,7 @@ function switchTab(tab) {
         secVen.style.display = 'none';
         btnInv.classList.add('active');
         btnVen.classList.remove('active');
-        renderInventario(); // Refrescar lista al volver
+        renderInventario();
     } else {
         secInv.style.display = 'none';
         secVen.style.display = 'block';
@@ -101,19 +102,20 @@ function switchTab(tab) {
 }
 
 /**
- * Actualiza el selector de la pestaña de ventas
+ * Llena el menú desplegable de ventas
  */
 function actualizarSelect() {
     const select = document.getElementById('select-producto');
     if (!select) return;
     
-    select.innerHTML = inventario.map(p => 
-        `<option value="${p.filaOriginal}">${p.nombre} (Disponibles: ${p.stock})</option>`
-    ).join('');
+    select.innerHTML = inventario.map(p => {
+        const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        return `<option value="${p.filaOriginal}">${p.nombre} (${disponible} disp.)</option>`;
+    }).join('');
 }
 
 /**
- * Registra la venta sumando a la Columna K
+ * Envía la venta al Excel (Suma a Columna K)
  */
 async function registrarVenta() {
     const fila = document.getElementById('select-producto').value;
@@ -121,11 +123,11 @@ async function registrarVenta() {
     const btnVenta = document.querySelector('.btn-save');
     
     if (!fila || isNaN(cantidad) || cantidad <= 0) {
-        return alert("Selecciona un producto y cantidad.");
+        return alert("Selecciona un producto y cantidad válida.");
     }
 
     try {
-        btnVenta.innerText = "ENVIANDO...";
+        btnVenta.innerText = "REGISTRANDO...";
         btnVenta.disabled = true;
 
         await fetch(SCRIPT_URL, {
@@ -138,32 +140,27 @@ async function registrarVenta() {
             })
         });
 
-        alert("¡Venta registrada! Se sumó a la Columna K del Excel.");
-        
+        alert("¡Venta registrada exitosamente!");
         document.getElementById('cant-venta').value = 1;
         btnVenta.innerText = "REGISTRAR VENTA";
         btnVenta.disabled = false;
         
-        // Recargar datos inmediatamente para ver el nuevo stock
         cargarDesdeDrive(); 
     } catch (e) {
-        alert("Error de conexión con el Excel.");
+        alert("Error al conectar con Excel.");
         btnVenta.innerText = "REGISTRAR VENTA";
         btnVenta.disabled = false;
     }
 }
 
 /**
- * Al cargar la aplicación
+ * Inicialización
  */
 window.onload = () => {
-    // Primero cargar lo que esté guardado para que no salga vacío
     const stored = localStorage.getItem('inventario');
     if(stored) {
         inventario = JSON.parse(stored);
         renderInventario();
     }
-    
-    // Luego buscar los datos reales del Drive
     cargarDesdeDrive();
 };
