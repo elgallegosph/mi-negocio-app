@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUnzIdsVbBE5sw0w5avtLpvJ1A7pGqRgqM32tSO7q0jcVVsqT1QWNmTMdQJVoAa6pxgw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIcI_BEDncLdCT9_Zh_7mMCKEcE_5quLGQzIrJT8BkSlmfX6STy2IHrIdIH0Y-xk0IOg/exec";
 
 let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
 let currentType = 'ingreso';
@@ -6,30 +6,36 @@ let currentType = 'ingreso';
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
     syncBtn.innerText = "⏳";
+    
     try {
-        const respuesta = await fetch(SCRIPT_URL);
+        const respuesta = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const filas = await respuesta.json();
-        if (filas.length > 1) {
-            transactions = filas.slice(1).map(fila => ({
+        
+        if (filas.length > 0) {
+            // Mapeamos los datos de tu imagen:
+            // fila[0] es "NOMBRE Y REFERENCIA"
+            // fila[4] es "PRECIO DE VENTA"
+            transactions = filas.map(fila => ({
                 id: Date.now() + Math.random(),
-                fecha: fila[0],
-                desc: fila[1],
-                amount: parseFloat(fila[2]) || 0,
-                type: fila[3] ? fila[3].toLowerCase().trim() : 'ingreso'
+                fecha: "Inventario",
+                desc: fila[0], 
+                amount: parseFloat(fila[4]) || 0,
+                type: 'ingreso' // Los cargamos como ingresos (inventario disponible)
             }));
+            
             localStorage.setItem('transactions', JSON.stringify(transactions));
             updateUI();
         }
         syncBtn.innerText = "🔄";
     } catch (e) {
+        console.error("Error:", e);
         syncBtn.innerText = "❌";
-        setTimeout(() => syncBtn.innerText = "🔄", 3000);
     }
 }
 
 function showModal(type) {
     currentType = type;
-    document.getElementById('modal-title').innerText = type === 'ingreso' ? 'Nuevo Ingreso' : 'Nuevo Gasto';
+    document.getElementById('modal-title').innerText = type === 'ingreso' ? 'Nueva Venta' : 'Nuevo Gasto';
     document.getElementById('modal').style.display = 'flex';
 }
 
@@ -69,11 +75,11 @@ async function saveTransaction() {
             mode: 'no-cors',
             body: JSON.stringify(nueva)
         });
-    } catch (e) { console.log("Offline: Guardado local"); }
+    } catch (e) { console.log("Guardado local"); }
 }
 
 function confirmarLimpieza() {
-    if (confirm("¿Borrar todo el historial local? (No afecta al Excel)")) {
+    if (confirm("¿Borrar lista actual para recargar desde Drive?")) {
         transactions = [];
         localStorage.removeItem('transactions');
         updateUI();
@@ -100,10 +106,10 @@ function updateUI() {
         const isInc = t.type === 'ingreso';
         li.innerHTML = `
             <div style="flex-grow:1">
-                <strong>${t.desc}</strong><br>
-                <small style="color:#999">${t.fecha || ''}</small>
+                <strong style="font-size: 14px;">${t.desc}</strong><br>
+                <small style="color:#999">${t.fecha}</small>
             </div>
-            <span class="${isInc ? 'income' : 'expense'}">${isInc ? '+' : '-'} $${t.amount.toLocaleString()}</span>
+            <span class="${isInc ? 'income' : 'expense'}" style="white-space: nowrap;">${isInc ? '+' : '-'} $${t.amount.toLocaleString()}</span>
             <button class="btn-delete-item" onclick="eliminarUno(${t.id})">×</button>
         `;
         list.appendChild(li);
@@ -114,10 +120,6 @@ function updateUI() {
     totalEl.innerText = `$${total.toLocaleString()}`;
     incomeEl.innerText = `$${inc.toLocaleString()}`;
     expenseEl.innerText = `$${exp.toLocaleString()}`;
-}
-
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
 }
 
 window.onload = () => {
