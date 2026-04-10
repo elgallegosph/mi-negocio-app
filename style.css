@@ -3,7 +3,6 @@
     --danger: #e74c3c;
     --dark: #2c3e50;
     --light: #f4f7f6;
-    --gray: #95a5a6;
 }
 
 body {
@@ -60,7 +59,6 @@ button {
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
-    transition: 0.3s;
 }
 
 .btn-add { background: var(--primary); color: white; }
@@ -73,12 +71,20 @@ button {
     align-items: center;
 }
 
-#sync-btn {
-    max-width: 120px;
-    padding: 8px;
-    background: #eee;
-    font-size: 12px;
+.header-btns { display: flex; gap: 8px; }
+
+#sync-btn, #clear-btn {
+    width: 45px;
+    height: 45px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
 }
+
+#sync-btn { background: #eee; }
+#clear-btn { background: #f8d7da; color: #721c24; }
 
 ul { list-style: none; padding: 0; }
 
@@ -96,7 +102,15 @@ li {
 .income { color: var(--primary); font-weight: bold; }
 .expense { color: var(--danger); font-weight: bold; }
 
-/* Modales */
+.btn-delete-item {
+    background: none;
+    color: #ccc;
+    font-size: 18px;
+    margin-left: 10px;
+    flex: none;
+    width: 30px;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -122,7 +136,6 @@ input {
     border: 1px solid #ddd;
     border-radius: 10px;
     box-sizing: border-box;
-    font-size: 16px;
 }
 
 .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
