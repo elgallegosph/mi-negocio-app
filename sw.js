@@ -1,4 +1,4 @@
-const CACHE_NAME = 'negocio-v1';
+const CACHE_NAME = 'negocio-v2';
 const assets = ['./', './index.html', './style.css', './app.js', './manifest.json'];
 
 self.addEventListener('install', e => {
