@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Negocio - Treinta Clone</title>
+    <title>Gestión Negocio - Treinta Pro</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c3e50">
@@ -31,7 +31,10 @@
             <section class="history">
                 <div class="history-header">
                     <h3>Movimientos</h3>
-                    <button onclick="cargarDesdeDrive()" id="sync-btn">🔄 Sincronizar</button>
+                    <div class="header-btns">
+                        <button onclick="cargarDesdeDrive()" id="sync-btn" title="Sincronizar">🔄</button>
+                        <button onclick="confirmarLimpieza()" id="clear-btn" title="Limpiar Todo">🗑️</button>
+                    </div>
                 </div>
                 <ul id="transaction-list"></ul>
             </section>
