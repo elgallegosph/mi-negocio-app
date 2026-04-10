@@ -1,36 +1,36 @@
 // CONFIGURACIÓN: Reemplaza con la URL de tu "Nueva implementación"
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzH1ytMMinKFumQx9mOM2U5xOiTXdT2PEW95wk_GMPrKUu9cjSfztMvfggiL_Zl--4Bug/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzd_BeeJgPJFIgtQ3oElAKq5lPLj-A1MRYdbW5bdcsXnn7OXrDr2qbOgM9a6KhEKASoEw/exec";
 
 let inventario = [];
 
 /**
- * Carga los datos desde el Excel (Fila 3 en adelante)
+ * Carga los datos desde el Excel (Forzando actualización)
  */
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
     if (syncBtn) syncBtn.innerText = "⏳";
     
     try {
-        // El parámetro ?t= evita que el navegador cargue datos viejos (caché)
-        const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
+        // El parámetro Math.random() asegura que NO use datos viejos
+        const res = await fetch(SCRIPT_URL + "?t=" + Math.random());
         const data = await res.json();
         
         if (data && data.length > 0) {
             inventario = data;
+            // Guardamos en el navegador
             localStorage.setItem('inventario', JSON.stringify(inventario));
             renderInventario();
-            console.log("Inventario cargado exitosamente.");
+            console.log("Datos frescos cargados desde el Excel");
         }
         if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) {
-        console.error("Error al cargar inventario:", e);
+        console.error("Error al cargar:", e);
         if (syncBtn) syncBtn.innerText = "❌";
-        setTimeout(() => { if (syncBtn) syncBtn.innerText = "🔄"; }, 3000);
     }
 }
 
 /**
- * Dibuja la lista de productos en la pestaña de Inventario
+ * Muestra los productos con la cantidad de la Columna D
  */
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
@@ -40,9 +40,12 @@ function renderInventario() {
     
     inventario.forEach(p => {
         const li = document.createElement('li');
-        // Ahora usamos p.stock que viene directamente de la columna D
-        const stockActual = parseInt(p.stock) || 0;
-        const sinStock = stockActual <= 0;
+        
+        // Convertimos a número lo que viene del Excel (Columna D)
+        const stockFisico = Number(p.stock); 
+        
+        // Si el número es mayor a 0, mostramos "Cant", si no "SIN STOCK"
+        const tieneStock = !isNaN(stockFisico) && stockFisico > 0;
         
         li.innerHTML = `
             <div style="flex-grow:1">
@@ -50,8 +53,8 @@ function renderInventario() {
                 <small>SKU: ${p.sku || 'N/A'}</small>
             </div>
             <div style="text-align:right">
-                <span class="stock-badge ${sinStock ? 'bg-empty' : 'bg-ok'}">
-                    ${sinStock ? 'SIN STOCK' : 'Cant: ' + stockActual}
+                <span class="stock-badge ${tieneStock ? 'bg-ok' : 'bg-empty'}">
+                    ${tieneStock ? 'Cant: ' + stockFisico : 'SIN STOCK'}
                 </span><br>
                 <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
             </div>
@@ -61,7 +64,7 @@ function renderInventario() {
 }
 
 /**
- * Buscador en tiempo real
+ * Buscador de productos
  */
 function filtrarProductos() {
     const texto = document.getElementById('busqueda').value.toLowerCase();
@@ -74,7 +77,7 @@ function filtrarProductos() {
 }
 
 /**
- * Control de navegación por pestañas
+ * Navegación entre Inventario y Ventas
  */
 function switchTab(tab) {
     const secInv = document.getElementById('sec-inventario');
@@ -87,6 +90,7 @@ function switchTab(tab) {
         secVen.style.display = 'none';
         btnInv.classList.add('active');
         btnVen.classList.remove('active');
+        renderInventario(); // Refrescar lista al volver
     } else {
         secInv.style.display = 'none';
         secVen.style.display = 'block';
@@ -97,20 +101,19 @@ function switchTab(tab) {
 }
 
 /**
- * Llena el menú desplegable de ventas con los productos del inventario
+ * Actualiza el selector de la pestaña de ventas
  */
 function actualizarSelect() {
     const select = document.getElementById('select-producto');
     if (!select) return;
     
-    // Generar opciones basadas en el inventario actual
     select.innerHTML = inventario.map(p => 
-        `<option value="${p.filaOriginal}">${p.nombre} ($${parseFloat(p.precio).toLocaleString()})</option>`
+        `<option value="${p.filaOriginal}">${p.nombre} (Disponibles: ${p.stock})</option>`
     ).join('');
 }
 
 /**
- * Envía la venta al Excel para que se sume a la Columna K (Cantidad Vendida)
+ * Registra la venta sumando a la Columna K
  */
 async function registrarVenta() {
     const fila = document.getElementById('select-producto').value;
@@ -118,12 +121,11 @@ async function registrarVenta() {
     const btnVenta = document.querySelector('.btn-save');
     
     if (!fila || isNaN(cantidad) || cantidad <= 0) {
-        return alert("Por favor selecciona un producto y una cantidad válida.");
+        return alert("Selecciona un producto y cantidad.");
     }
 
     try {
-        // Bloquear botón para evitar doble clic
-        btnVenta.innerText = "REGISTRANDO...";
+        btnVenta.innerText = "ENVIANDO...";
         btnVenta.disabled = true;
 
         await fetch(SCRIPT_URL, {
@@ -136,35 +138,32 @@ async function registrarVenta() {
             })
         });
 
-        alert("¡Venta registrada! Se ha sumado a la columna 'Cantidad Vendida' en tu Excel.");
+        alert("¡Venta registrada! Se sumó a la Columna K del Excel.");
         
-        // Resetear formulario y recargar datos
         document.getElementById('cant-venta').value = 1;
         btnVenta.innerText = "REGISTRAR VENTA";
         btnVenta.disabled = false;
         
+        // Recargar datos inmediatamente para ver el nuevo stock
         cargarDesdeDrive(); 
     } catch (e) {
-        alert("Hubo un error al conectar con el servidor.");
+        alert("Error de conexión con el Excel.");
         btnVenta.innerText = "REGISTRAR VENTA";
         btnVenta.disabled = false;
-        console.error(e);
     }
 }
 
 /**
- * Al cargar la página
+ * Al cargar la aplicación
  */
 window.onload = () => {
-    // Cargar datos locales de respaldo
+    // Primero cargar lo que esté guardado para que no salga vacío
     const stored = localStorage.getItem('inventario');
     if(stored) {
         inventario = JSON.parse(stored);
         renderInventario();
     }
     
-    // Intentar sincronizar con Google Drive de inmediato
-    if (navigator.onLine) {
-        cargarDesdeDrive();
-    }
+    // Luego buscar los datos reales del Drive
+    cargarDesdeDrive();
 };
