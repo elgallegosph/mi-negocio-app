@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHr3BxHoFpYbZSIx-tMy0seC0TzML1iLNdEp7SxBfkBs_JwQF7EceHn-5UmuZ3FnMA/exec"; // Pega aquí la URL nueva
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgwc9J_FfTLk82xkcx5PEQSm4Vp9Ktc8do7sziVoWq1c_xicVssarvkssZvB92O7daFA/exec"; 
 let inventario = [];
 
 async function cargarDesdeDrive() {
@@ -6,19 +6,17 @@ async function cargarDesdeDrive() {
     syncBtn.innerText = "⏳";
     
     try {
-        // El "?t=" evita que el navegador use datos viejos guardados
         const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
         
-        if (data && data.length > 0) {
+        if (data) {
             inventario = data;
             localStorage.setItem('inventario', JSON.stringify(inventario));
             renderInventario();
-            console.log("Productos cargados:", inventario.length);
         }
         syncBtn.innerText = "🔄";
     } catch (e) {
-        console.error("Error cargando inventario", e);
+        console.error("Error:", e);
         syncBtn.innerText = "❌";
     }
 }
@@ -48,13 +46,11 @@ function renderInventario() {
     });
 }
 
-// Función para buscar productos en tiempo real
 function filtrarProductos() {
     const texto = document.getElementById('busqueda').value.toLowerCase();
-    const lista = document.getElementById('lista-inventario');
-    const items = lista.getElementsByTagName('li');
+    const items = document.querySelectorAll('#lista-inventario li');
 
-    Array.from(items).forEach(item => {
+    items.forEach(item => {
         const nombre = item.textContent.toLowerCase();
         item.style.display = nombre.includes(texto) ? 'flex' : 'none';
     });
@@ -76,10 +72,9 @@ function switchTab(tab) {
 
 function actualizarSelect() {
     const select = document.getElementById('select-producto');
-    // Solo mostrar productos que tengan stock para vender
-    const disponibles = inventario.filter(p => p.stock > 0);
-    select.innerHTML = disponibles.map(p => 
-        `<option value="${p.filaOriginal}">${p.nombre} (${p.stock})</option>`
+    // Mostramos todos para poder seleccionar, indicando stock
+    select.innerHTML = inventario.map(p => 
+        `<option value="${p.filaOriginal}">${p.nombre} (${p.stock} disp.)</option>`
     ).join('');
 }
 
@@ -93,12 +88,16 @@ async function registrarVenta() {
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            body: JSON.stringify({ action: "venta", fila: parseInt(fila), cantidad: cantidad })
+            body: JSON.stringify({ 
+                action: "venta", 
+                fila: parseInt(fila), 
+                cantidad: cantidad 
+            })
         });
-        alert("Venta registrada. Sincronizando...");
+        alert("¡Venta exitosa! El stock en el Excel se está actualizando.");
         cargarDesdeDrive(); 
     } catch (e) {
-        alert("Error de conexión");
+        alert("Error al registrar venta");
     }
 }
 
