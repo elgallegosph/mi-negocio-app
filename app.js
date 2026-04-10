@@ -1,11 +1,6 @@
-// CONFIGURACIÓN: Reemplaza con la URL de tu "Nueva implementación"
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzd_BeeJgPJFIgtQ3oElAKq5lPLj-A1MRYdbW5bdcsXnn7OXrDr2qbOgM9a6KhEKASoEw/exec";
-
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzd_BeeJgPJFIgtQ3oElAKq5lPLj-A1MRYdbW5bdcsXnn7OXrDr2qbOgM9a6KhEKASoEw/exec"; 
 let inventario = [];
 
-/**
- * Carga los datos desde el Excel (Fila 3 en adelante)
- */
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
     if (syncBtn) syncBtn.innerText = "⏳";
@@ -17,45 +12,57 @@ async function cargarDesdeDrive() {
         if (data && data.length > 0) {
             inventario = data;
             localStorage.setItem('inventario', JSON.stringify(inventario));
+            calcularTotales();
             renderInventario();
         }
         if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) {
-        console.error("Error al cargar:", e);
         if (syncBtn) syncBtn.innerText = "❌";
     }
 }
 
-/**
- * Lógica de visualización: Muestra cantidad física o estado de Columna M
- */
+function calcularTotales() {
+    let dineroTotal = 0;
+    let unidadesVendidas = 0;
+
+    inventario.forEach(p => {
+        const cantVendida = parseFloat(p.vendidos) || 0;
+        const precioUnitario = parseFloat(p.precio) || 0;
+        
+        dineroTotal += (cantVendida * precioUnitario);
+        unidadesVendidas += cantVendida;
+    });
+
+    // Actualizar el banner principal
+    document.getElementById('gran-total-dinero').innerText = `$${dineroTotal.toLocaleString()}`;
+    
+    // Actualizar resumen en la pestaña de ventas
+    const resumen = document.getElementById('resumen-cantidades');
+    if (resumen) {
+        resumen.innerHTML = `Unidades totales vendidas: <strong>${unidadesVendidas}</strong>`;
+    }
+}
+
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
     if (!lista) return;
-    
     lista.innerHTML = '';
     
     inventario.forEach(p => {
         const li = document.createElement('li');
-        
-        // Datos del Excel
-        const cantInicial = parseFloat(p.stock) || 0; // Columna D
-        const cantVendida = parseFloat(p.vendidos) || 0; // Columna K
-        const estadoStock = p.estado || "SIN STOCK"; // Columna M
-        
-        // CONDICIÓN: Si lo vendido alcanza o supera la cantidad inicial, mostrar Columna M
-        // De lo contrario, mostrar la cantidad física disponible.
-        const mostrarEstado = (cantVendida >= cantInicial);
+        const cantInicial = parseFloat(p.stock) || 0;
+        const cantVendida = parseFloat(p.vendidos) || 0;
         const stockActual = cantInicial - cantVendida;
+        const mostrarEstado = stockActual <= 0;
 
         li.innerHTML = `
             <div style="flex-grow:1">
                 <strong>${p.nombre}</strong>
-                <small>SKU: ${p.sku || 'N/A'}</small>
+                <small>Vendidos: ${cantVendida}</small>
             </div>
             <div style="text-align:right">
                 <span class="stock-badge ${mostrarEstado ? 'bg-empty' : 'bg-ok'}">
-                    ${mostrarEstado ? estadoStock : 'Cant: ' + stockActual}
+                    ${mostrarEstado ? "SIN STOCK" : 'Cant: ' + stockActual}
                 </span><br>
                 <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
             </div>
@@ -64,102 +71,58 @@ function renderInventario() {
     });
 }
 
-/**
- * Buscador en tiempo real
- */
-function filtrarProductos() {
-    const texto = document.getElementById('busqueda').value.toLowerCase();
-    const items = document.querySelectorAll('#lista-inventario li');
-    
-    items.forEach(item => {
-        const contenido = item.textContent.toLowerCase();
-        item.style.display = contenido.includes(texto) ? 'flex' : 'none';
-    });
-}
-
-/**
- * Control de navegación por pestañas
- */
 function switchTab(tab) {
-    const secInv = document.getElementById('sec-inventario');
-    const secVen = document.getElementById('sec-ventas');
-    const btnInv = document.getElementById('tab-inv');
-    const btnVen = document.getElementById('tab-ven');
-
-    if (tab === 'inventario') {
-        secInv.style.display = 'block';
-        secVen.style.display = 'none';
-        btnInv.classList.add('active');
-        btnVen.classList.remove('active');
-        renderInventario();
-    } else {
-        secInv.style.display = 'none';
-        secVen.style.display = 'block';
-        btnInv.classList.remove('active');
-        btnVen.classList.add('active');
-        actualizarSelect();
-    }
+    document.getElementById('sec-inventario').style.display = tab === 'inventario' ? 'block' : 'none';
+    document.getElementById('sec-ventas').style.display = tab === 'ventas' ? 'block' : 'none';
+    document.getElementById('tab-inv').className = tab === 'inventario' ? 'active' : '';
+    document.getElementById('tab-ven').className = tab === 'ventas' ? 'active' : '';
+    if(tab === 'ventas') actualizarSelect();
 }
 
-/**
- * Llena el menú desplegable de ventas
- */
 function actualizarSelect() {
     const select = document.getElementById('select-producto');
     if (!select) return;
-    
     select.innerHTML = inventario.map(p => {
         const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         return `<option value="${p.filaOriginal}">${p.nombre} (${disponible} disp.)</option>`;
     }).join('');
 }
 
-/**
- * Envía la venta al Excel (Suma a Columna K)
- */
 async function registrarVenta() {
     const fila = document.getElementById('select-producto').value;
     const cantidad = parseInt(document.getElementById('cant-venta').value);
-    const btnVenta = document.querySelector('.btn-save');
+    const btn = document.querySelector('.btn-save');
     
-    if (!fila || isNaN(cantidad) || cantidad <= 0) {
-        return alert("Selecciona un producto y cantidad válida.");
-    }
-
     try {
-        btnVenta.innerText = "REGISTRANDO...";
-        btnVenta.disabled = true;
-
+        btn.innerText = "REGISTRANDO...";
+        btn.disabled = true;
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            body: JSON.stringify({ 
-                action: "venta", 
-                fila: parseInt(fila), 
-                cantidad: cantidad 
-            })
+            body: JSON.stringify({ action: "venta", fila: parseInt(fila), cantidad: cantidad })
         });
-
-        alert("¡Venta registrada exitosamente!");
-        document.getElementById('cant-venta').value = 1;
-        btnVenta.innerText = "REGISTRAR VENTA";
-        btnVenta.disabled = false;
-        
+        alert("Venta registrada");
+        btn.innerText = "REGISTRAR VENTA";
+        btn.disabled = false;
         cargarDesdeDrive(); 
     } catch (e) {
-        alert("Error al conectar con Excel.");
-        btnVenta.innerText = "REGISTRAR VENTA";
-        btnVenta.disabled = false;
+        alert("Error");
+        btn.disabled = false;
     }
 }
 
-/**
- * Inicialización
- */
+function filtrarProductos() {
+    const texto = document.getElementById('busqueda').value.toLowerCase();
+    document.querySelectorAll('#lista-inventario li').forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(texto) ? 'flex' : 'none';
+    });
+}
+
 window.onload = () => {
     const stored = localStorage.getItem('inventario');
     if(stored) {
         inventario = JSON.parse(stored);
+        calcularTotales();
         renderInventario();
     }
     cargarDesdeDrive();
