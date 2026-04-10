@@ -1,4 +1,4 @@
-const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT_AQUI";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUnzIdsVbBE5sw0w5avtLpvJ1A7pGqRgqM32tSO7q0jcVVsqT1QWNmTMdQJVoAa6pxgw/exec";
 
 let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
 let currentType = 'ingreso';
