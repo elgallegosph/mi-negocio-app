@@ -1,128 +1,90 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIcI_BEDncLdCT9_Zh_7mMCKEcE_5quLGQzIrJT8BkSlmfX6STy2IHrIdIH0Y-xk0IOg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLyFRYq8cVUhNZsL5w2J5wj9wtSa1ERXzby1YViKRDoeklxIELmZuHCknOCtYN75jKKg/exec";
+let inventario = [];
+let ventasRealizadas = JSON.parse(localStorage.getItem('ventas')) || [];
 
-let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-let currentType = 'ingreso';
-
-async function cargarDesdeDrive() {
-    const syncBtn = document.getElementById('sync-btn');
-    syncBtn.innerText = "⏳";
+function switchTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     
-    try {
-        const respuesta = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
-        const filas = await respuesta.json();
-        
-        if (filas.length > 0) {
-            // Mapeamos los datos de tu imagen:
-            // fila[0] es "NOMBRE Y REFERENCIA"
-            // fila[4] es "PRECIO DE VENTA"
-            transactions = filas.map(fila => ({
-                id: Date.now() + Math.random(),
-                fecha: "Inventario",
-                desc: fila[0], 
-                amount: parseFloat(fila[4]) || 0,
-                type: 'ingreso' // Los cargamos como ingresos (inventario disponible)
-            }));
-            
-            localStorage.setItem('transactions', JSON.stringify(transactions));
-            updateUI();
-        }
-        syncBtn.innerText = "🔄";
-    } catch (e) {
-        console.error("Error:", e);
-        syncBtn.innerText = "❌";
+    if(tab === 'inventario') {
+        document.getElementById('sec-inventario').style.display = 'block';
+        document.getElementById('tab-inv').classList.add('active');
+    } else {
+        document.getElementById('sec-ventas').style.display = 'block';
+        document.getElementById('tab-ven').classList.add('active');
+        actualizarSelect();
     }
 }
 
-function showModal(type) {
-    currentType = type;
-    document.getElementById('modal-title').innerText = type === 'ingreso' ? 'Nueva Venta' : 'Nuevo Gasto';
-    document.getElementById('modal').style.display = 'flex';
+async function cargarDesdeDrive() {
+    try {
+        const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
+        inventario = await res.json();
+        localStorage.setItem('inventario', JSON.stringify(inventario));
+        renderInventario();
+    } catch (e) { console.error("Error cargando inventario"); }
 }
 
-function closeModal() {
-    document.getElementById('modal').style.display = 'none';
-    document.getElementById('desc').value = '';
-    document.getElementById('amount').value = '';
-}
-
-async function saveTransaction() {
-    const desc = document.getElementById('desc').value;
-    const amount = document.getElementById('amount').value;
-    if (!desc || !amount) return alert('Completa los datos');
-
-    const nueva = {
-        fecha: new Date().toLocaleDateString(),
-        desc: desc,
-        monto: parseFloat(amount),
-        tipo: currentType
-    };
-
-    transactions.unshift({
-        id: Date.now(),
-        desc: nueva.desc,
-        amount: nueva.monto,
-        type: nueva.tipo,
-        fecha: nueva.fecha
-    });
+function renderInventario() {
+    const lista = document.getElementById('lista-inventario');
+    lista.innerHTML = '';
     
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-    updateUI();
-    closeModal();
+    inventario.forEach(p => {
+        const li = document.createElement('li');
+        const sinStock = p.stock <= 0;
+        li.innerHTML = `
+            <div style="flex-grow:1">
+                <strong>${p.nombre}</strong><br>
+                <small>SKU: ${p.sku}</small>
+            </div>
+            <div style="text-align:right">
+                <span class="stock-badge ${sinStock ? 'bg-empty' : 'bg-ok'}">
+                    ${sinStock ? 'SIN STOCK' : 'Stock: ' + p.stock}
+                </span><br>
+                <strong>$${p.precio.toLocaleString()}</strong>
+            </div>
+        `;
+        lista.appendChild(li);
+    });
+}
 
+function actualizarSelect() {
+    const select = document.getElementById('select-producto');
+    select.innerHTML = inventario.map(p => 
+        `<option value="${p.filaOriginal}">${p.nombre} (${p.stock} disp.)</option>`
+    ).join('');
+}
+
+async function registrarVenta() {
+    const fila = document.getElementById('select-producto').value;
+    const cantidad = parseInt(document.getElementById('cant-venta').value);
+    const producto = inventario.find(p => p.filaOriginal == fila);
+
+    if (producto.stock < cantidad) return alert("No hay suficiente stock");
+
+    // 1. Actualizar localmente
+    producto.stock -= cantidad;
+    renderInventario();
+
+    // 2. Enviar a Excel
     try {
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            body: JSON.stringify(nueva)
+            body: JSON.stringify({ action: "venta", fila: fila, cantidad: cantidad })
         });
-    } catch (e) { console.log("Guardado local"); }
-}
-
-function confirmarLimpieza() {
-    if (confirm("¿Borrar lista actual para recargar desde Drive?")) {
-        transactions = [];
-        localStorage.removeItem('transactions');
-        updateUI();
+        alert("¡Venta registrada y Excel actualizado!");
+        cargarDesdeDrive(); // Recargamos para confirmar datos frescos
+    } catch (e) {
+        alert("Error al conectar con Excel");
     }
 }
 
-function eliminarUno(id) {
-    transactions = transactions.filter(t => t.id !== id);
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-    updateUI();
-}
-
-function updateUI() {
-    const list = document.getElementById('transaction-list');
-    const totalEl = document.getElementById('total-balance');
-    const incomeEl = document.getElementById('total-income');
-    const expenseEl = document.getElementById('total-expense');
-
-    list.innerHTML = '';
-    let total = 0, inc = 0, exp = 0;
-
-    transactions.forEach(t => {
-        const li = document.createElement('li');
-        const isInc = t.type === 'ingreso';
-        li.innerHTML = `
-            <div style="flex-grow:1">
-                <strong style="font-size: 14px;">${t.desc}</strong><br>
-                <small style="color:#999">${t.fecha}</small>
-            </div>
-            <span class="${isInc ? 'income' : 'expense'}" style="white-space: nowrap;">${isInc ? '+' : '-'} $${t.amount.toLocaleString()}</span>
-            <button class="btn-delete-item" onclick="eliminarUno(${t.id})">×</button>
-        `;
-        list.appendChild(li);
-        if (isInc) { inc += t.amount; total += t.amount; }
-        else { exp += t.amount; total -= t.amount; }
-    });
-
-    totalEl.innerText = `$${total.toLocaleString()}`;
-    incomeEl.innerText = `$${inc.toLocaleString()}`;
-    expenseEl.innerText = `$${exp.toLocaleString()}`;
-}
-
 window.onload = () => {
-    updateUI();
-    if (navigator.onLine) cargarDesdeDrive();
+    const stored = localStorage.getItem('inventario');
+    if(stored) {
+        inventario = JSON.parse(stored);
+        renderInventario();
+    }
+    cargarDesdeDrive();
 };
