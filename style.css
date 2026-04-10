@@ -3,11 +3,12 @@
     --danger: #e74c3c;
     --dark: #2c3e50;
     --light: #f4f7f6;
+    --gray: #95a5a6;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--light);
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f0f2f5;
     margin: 0;
     display: flex;
     justify-content: center;
@@ -15,40 +16,39 @@ body {
 
 .app-container {
     width: 100%;
-    max-width: 500px;
+    max-width: 480px;
     background: white;
     min-height: 100vh;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
 }
 
 header {
     background: var(--dark);
     color: white;
-    padding: 20px;
+    padding: 30px 20px;
     text-align: center;
-    border-bottom-left-radius: 20px;
-    border-bottom-right-radius: 20px;
+    border-radius: 0 0 25px 25px;
 }
 
 .balance-card {
     background: rgba(255,255,255,0.1);
     padding: 20px;
     border-radius: 15px;
-    margin-top: 10px;
+    margin-top: 15px;
 }
 
 .summary {
     display: flex;
     justify-content: space-around;
-    margin-top: 10px;
+    margin-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    padding-top: 10px;
 }
-
-.income { color: #2ecc71; font-weight: bold; }
-.expense { color: #e74c3c; font-weight: bold; }
 
 .actions {
     display: flex;
-    gap: 10px;
+    gap: 15px;
     padding: 20px;
 }
 
@@ -56,51 +56,75 @@ button {
     flex: 1;
     padding: 15px;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
+    font-size: 16px;
     font-weight: bold;
     cursor: pointer;
+    transition: 0.3s;
 }
 
 .btn-add { background: var(--primary); color: white; }
 .btn-sub { background: var(--danger); color: white; }
 
-.history { padding: 20px; }
+.history { padding: 0 20px; flex-grow: 1; }
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#sync-btn {
+    max-width: 120px;
+    padding: 8px;
+    background: #eee;
+    font-size: 12px;
+}
 
 ul { list-style: none; padding: 0; }
 
 li {
     background: #fff;
     padding: 15px;
-    margin-bottom: 10px;
-    border-radius: 10px;
+    margin-bottom: 12px;
+    border-radius: 12px;
     display: flex;
     justify-content: space-between;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
-/* Modal */
+.income { color: var(--primary); font-weight: bold; }
+.expense { color: var(--danger); font-weight: bold; }
+
+/* Modales */
 .modal {
     display: none;
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.6);
     align-items: center;
     justify-content: center;
+    z-index: 1000;
 }
 
 .modal-content {
     background: white;
-    padding: 25px;
-    border-radius: 15px;
-    width: 80%;
-    max-width: 400px;
+    padding: 30px;
+    border-radius: 20px;
+    width: 85%;
+    max-width: 350px;
 }
 
 input {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     margin: 10px 0;
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: 10px;
     box-sizing: border-box;
+    font-size: 16px;
 }
+
+.modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
+.btn-save { background: var(--dark); color: white; }
+.btn-cancel { background: #eee; }
