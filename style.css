@@ -1,143 +1,40 @@
-:root {
-    --primary: #2ecc71;
-    --danger: #e74c3c;
-    --dark: #2c3e50;
-    --light: #f4f7f6;
-}
-
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #f0f2f5;
-    margin: 0;
+.tabs {
     display: flex;
     justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
 }
-
-.app-container {
-    width: 100%;
-    max-width: 480px;
+.tabs button {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+}
+.tabs button.active {
     background: white;
-    min-height: 100vh;
+    color: var(--dark);
+}
+.search-bar {
+    display: flex;
+    padding: 15px;
+    gap: 10px;
+}
+.venta-form {
+    padding: 20px;
     display: flex;
     flex-direction: column;
+    gap: 10px;
 }
-
-header {
-    background: var(--dark);
-    color: white;
-    padding: 30px 20px;
-    text-align: center;
-    border-radius: 0 0 25px 25px;
-}
-
-.balance-card {
-    background: rgba(255,255,255,0.1);
-    padding: 20px;
-    border-radius: 15px;
-    margin-top: 15px;
-}
-
-.summary {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 15px;
-    border-top: 1px solid rgba(255,255,255,0.2);
-    padding-top: 10px;
-}
-
-.actions {
-    display: flex;
-    gap: 15px;
-    padding: 20px;
-}
-
-button {
-    flex: 1;
-    padding: 15px;
-    border: none;
-    border-radius: 12px;
+.venta-form select {
+    padding: 12px;
+    border-radius: 8px;
     font-size: 16px;
+}
+.stock-badge {
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 12px;
     font-weight: bold;
-    cursor: pointer;
 }
-
-.btn-add { background: var(--primary); color: white; }
-.btn-sub { background: var(--danger); color: white; }
-
-.history { padding: 0 20px; flex-grow: 1; }
-.history-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.header-btns { display: flex; gap: 8px; }
-
-#sync-btn, #clear-btn {
-    width: 45px;
-    height: 45px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-}
-
-#sync-btn { background: #eee; }
-#clear-btn { background: #f8d7da; color: #721c24; }
-
-ul { list-style: none; padding: 0; }
-
-li {
-    background: #fff;
-    padding: 15px;
-    margin-bottom: 12px;
-    border-radius: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-
-.income { color: var(--primary); font-weight: bold; }
-.expense { color: var(--danger); font-weight: bold; }
-
-.btn-delete-item {
-    background: none;
-    color: #ccc;
-    font-size: 18px;
-    margin-left: 10px;
-    flex: none;
-    width: 30px;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6);
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: white;
-    padding: 30px;
-    border-radius: 20px;
-    width: 85%;
-    max-width: 350px;
-}
-
-input {
-    width: 100%;
-    padding: 14px;
-    margin: 10px 0;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    box-sizing: border-box;
-}
-
-.modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
-.btn-save { background: var(--dark); color: white; }
-.btn-cancel { background: #eee; }
+.bg-ok { background: #d4edda; color: #155724; }
+.bg-empty { background: #f8d7da; color: #721c24; }
