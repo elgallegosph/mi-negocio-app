@@ -1,1 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Negocio - Gestión</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Mi Negocio</h1>
+        <div id="balance-card">
+            <p>Balance Total</p>
+            <h2 id="total-balance">$0.00</h2>
+        </div>
+    </header>
 
+    <main>
+        <section id="actions">
+            <button onclick="openModal('venta')">+ Registrar Venta</button>
+            <button onclick="openModal('gasto')" class="btn-gasto">- Registrar Gasto</button>
+        </section>
+
+        <section id="recent-activity">
+            <h3>Actividad Reciente</h3>
+            <ul id="transaction-list">
+                </ul>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
