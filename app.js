@@ -1,6 +1,64 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLyFRYq8cVUhNZsL5w2J5wj9wtSa1ERXzby1YViKRDoeklxIELmZuHCknOCtYN75jKKg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpCwC4pSGNOU0BfGcQtRQvclAsZR-ygOI6gF3nXVgrzVAWjhENfJZG4wBHDZvYJJDK/exec"; // Pega aquí la URL nueva
 let inventario = [];
-let ventasRealizadas = JSON.parse(localStorage.getItem('ventas')) || [];
+
+async function cargarDesdeDrive() {
+    const syncBtn = document.getElementById('sync-btn');
+    syncBtn.innerText = "⏳";
+    
+    try {
+        // El "?t=" evita que el navegador use datos viejos guardados
+        const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
+        const data = await res.json();
+        
+        if (data && data.length > 0) {
+            inventario = data;
+            localStorage.setItem('inventario', JSON.stringify(inventario));
+            renderInventario();
+            console.log("Productos cargados:", inventario.length);
+        }
+        syncBtn.innerText = "🔄";
+    } catch (e) {
+        console.error("Error cargando inventario", e);
+        syncBtn.innerText = "❌";
+    }
+}
+
+function renderInventario() {
+    const lista = document.getElementById('lista-inventario');
+    lista.innerHTML = '';
+    
+    inventario.forEach(p => {
+        const li = document.createElement('li');
+        const stock = parseInt(p.stock) || 0;
+        const sinStock = stock <= 0;
+        
+        li.innerHTML = `
+            <div style="flex-grow:1">
+                <strong>${p.nombre}</strong>
+                <small>SKU: ${p.sku}</small>
+            </div>
+            <div style="text-align:right">
+                <span class="stock-badge ${sinStock ? 'bg-empty' : 'bg-ok'}">
+                    ${sinStock ? 'SIN STOCK' : 'Stock: ' + stock}
+                </span><br>
+                <strong>$${parseFloat(p.precio).toLocaleString()}</strong>
+            </div>
+        `;
+        lista.appendChild(li);
+    });
+}
+
+// Función para buscar productos en tiempo real
+function filtrarProductos() {
+    const texto = document.getElementById('busqueda').value.toLowerCase();
+    const lista = document.getElementById('lista-inventario');
+    const items = lista.getElementsByTagName('li');
+
+    Array.from(items).forEach(item => {
+        const nombre = item.textContent.toLowerCase();
+        item.style.display = nombre.includes(texto) ? 'flex' : 'none';
+    });
+}
 
 function switchTab(tab) {
     document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
@@ -16,67 +74,31 @@ function switchTab(tab) {
     }
 }
 
-async function cargarDesdeDrive() {
-    try {
-        const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
-        inventario = await res.json();
-        localStorage.setItem('inventario', JSON.stringify(inventario));
-        renderInventario();
-    } catch (e) { console.error("Error cargando inventario"); }
-}
-
-function renderInventario() {
-    const lista = document.getElementById('lista-inventario');
-    lista.innerHTML = '';
-    
-    inventario.forEach(p => {
-        const li = document.createElement('li');
-        const sinStock = p.stock <= 0;
-        li.innerHTML = `
-            <div style="flex-grow:1">
-                <strong>${p.nombre}</strong><br>
-                <small>SKU: ${p.sku}</small>
-            </div>
-            <div style="text-align:right">
-                <span class="stock-badge ${sinStock ? 'bg-empty' : 'bg-ok'}">
-                    ${sinStock ? 'SIN STOCK' : 'Stock: ' + p.stock}
-                </span><br>
-                <strong>$${p.precio.toLocaleString()}</strong>
-            </div>
-        `;
-        lista.appendChild(li);
-    });
-}
-
 function actualizarSelect() {
     const select = document.getElementById('select-producto');
-    select.innerHTML = inventario.map(p => 
-        `<option value="${p.filaOriginal}">${p.nombre} (${p.stock} disp.)</option>`
+    // Solo mostrar productos que tengan stock para vender
+    const disponibles = inventario.filter(p => p.stock > 0);
+    select.innerHTML = disponibles.map(p => 
+        `<option value="${p.filaOriginal}">${p.nombre} (${p.stock})</option>`
     ).join('');
 }
 
 async function registrarVenta() {
     const fila = document.getElementById('select-producto').value;
     const cantidad = parseInt(document.getElementById('cant-venta').value);
-    const producto = inventario.find(p => p.filaOriginal == fila);
+    
+    if (!fila) return alert("Selecciona un producto");
 
-    if (producto.stock < cantidad) return alert("No hay suficiente stock");
-
-    // 1. Actualizar localmente
-    producto.stock -= cantidad;
-    renderInventario();
-
-    // 2. Enviar a Excel
     try {
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            body: JSON.stringify({ action: "venta", fila: fila, cantidad: cantidad })
+            body: JSON.stringify({ action: "venta", fila: parseInt(fila), cantidad: cantidad })
         });
-        alert("¡Venta registrada y Excel actualizado!");
-        cargarDesdeDrive(); // Recargamos para confirmar datos frescos
+        alert("Venta registrada. Sincronizando...");
+        cargarDesdeDrive(); 
     } catch (e) {
-        alert("Error al conectar con Excel");
+        alert("Error de conexión");
     }
 }
 
