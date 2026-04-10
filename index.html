@@ -3,54 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Negocio - Treinta Pro</title>
+    <title>Amare Beauty - Gestión</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2c3e50">
 </head>
 <body>
     <div class="app-container">
         <header>
-            <h1>Mi Negocio</h1>
-            <div class="balance-card">
-                <span>Balance Total</span>
-                <h2 id="total-balance">$0</h2>
-                <div class="summary">
-                    <div class="income">↑ <span id="total-income">$0</span></div>
-                    <div class="expense">↓ <span id="total-expense">$0</span></div>
-                </div>
-            </div>
+            <h1>Amare Beauty</h1>
+            <nav class="tabs">
+                <button onclick="switchTab('inventario')" id="tab-inv" class="active">Inventario</button>
+                <button onclick="switchTab('ventas')" id="tab-ven">Ventas</button>
+            </nav>
         </header>
 
         <main>
-            <div class="actions">
-                <button onclick="showModal('ingreso')" class="btn-add">+ Ingreso</button>
-                <button onclick="showModal('gasto')" class="btn-sub">- Gasto</button>
-            </div>
-
-            <section class="history">
-                <div class="history-header">
-                    <h3>Movimientos</h3>
-                    <div class="header-btns">
-                        <button onclick="cargarDesdeDrive()" id="sync-btn" title="Sincronizar">🔄</button>
-                        <button onclick="confirmarLimpieza()" id="clear-btn" title="Limpiar Todo">🗑️</button>
-                    </div>
+            <section id="sec-inventario" class="tab-content">
+                <div class="search-bar">
+                    <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()">
+                    <button onclick="cargarDesdeDrive()">🔄</button>
                 </div>
-                <ul id="transaction-list"></ul>
+                <ul id="lista-inventario"></ul>
+            </section>
+
+            <section id="sec-ventas" class="tab-content" style="display:none;">
+                <h3>Registrar Venta</h3>
+                <div class="venta-form">
+                    <select id="select-producto"></select>
+                    <input type="number" id="cant-venta" value="1" min="1">
+                    <button onclick="registrarVenta()" class="btn-save">VENDER Y ACTUALIZAR EXCEL</button>
+                </div>
+                <hr>
+                <h3>Historial del día</h3>
+                <ul id="lista-ventas"></ul>
             </section>
         </main>
-    </div>
-
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <h3 id="modal-title">Registrar</h3>
-            <input type="text" id="desc" placeholder="Descripción (ej. Venta)">
-            <input type="number" id="amount" placeholder="Monto $">
-            <div class="modal-buttons">
-                <button onclick="closeModal()" class="btn-cancel">Cancelar</button>
-                <button onclick="saveTransaction()" class="btn-save">Guardar</button>
-            </div>
-        </div>
     </div>
 
     <script src="app.js"></script>
