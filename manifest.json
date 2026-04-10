@@ -1,6 +1,6 @@
 {
-  "short_name": "MiNegocio",
-  "name": "Gestión de Mi Negocio",
+  "short_name": "TreintaClone",
+  "name": "Gestión Negocio Pro",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2652/2652218.png",
@@ -12,5 +12,5 @@
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#2c3e50",
-  "background_color": "#f4f7f6"
+  "background_color": "#ffffff"
 }
