@@ -40,7 +40,7 @@ function renderInventario() {
     
     inventario.forEach(p => {
         const li = document.createElement('li');
-        // El stock ahora viene calculado desde el Excel
+        // Ahora usamos p.stock que viene directamente de la columna D
         const stockActual = parseInt(p.stock) || 0;
         const sinStock = stockActual <= 0;
         
@@ -51,7 +51,7 @@ function renderInventario() {
             </div>
             <div style="text-align:right">
                 <span class="stock-badge ${sinStock ? 'bg-empty' : 'bg-ok'}">
-                    ${sinStock ? 'SIN STOCK' : 'Disp: ' + stockActual}
+                    ${sinStock ? 'SIN STOCK' : 'Cant: ' + stockActual}
                 </span><br>
                 <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
             </div>
