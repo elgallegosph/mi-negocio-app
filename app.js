@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkn3oWKF_rLuSOga5ItHJPItZ5kPSfyfVKm9cPcPdvUQhZaGY28ZHAUTMzOAQWNHMmNQ/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyiGlBgcrLkuoXCXKTAiJx-k283AQkrkW_SXJQgBDfKzZNKV0kaKPMHCF1S52nTG78PIA/exec"; 
 let inventario = [];
 
 async function cargarDesdeDrive() {
@@ -14,17 +14,71 @@ async function cargarDesdeDrive() {
             renderInventario();
         }
         if (syncBtn) syncBtn.innerText = "🔄";
+    } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
+}
+
+function verificarFiado() {
+    const metodo = document.getElementById('metodo-pago').value;
+    const campos = document.getElementById('campos-fiado');
+    campos.style.display = (metodo === "Fiado") ? "block" : "none";
+}
+
+async function registrarVenta() {
+    const productoSelect = document.getElementById('select-producto');
+    const fila = productoSelect.value;
+    const nombreProd = productoSelect.options[productoSelect.selectedIndex].text;
+    const cantidad = document.getElementById('cant-venta').value;
+    const metodo = document.getElementById('metodo-pago').value;
+    const cliente = document.getElementById('nombre-cliente').value;
+    const telefono = document.getElementById('tel-cliente').value;
+    const btn = document.querySelector('.btn-save');
+
+    if (!fila) return alert("Selecciona un producto");
+    if (metodo === "Fiado" && (!cliente || !telefono)) return alert("Faltan datos del cliente");
+
+    try {
+        btn.innerText = "REGISTRANDO...";
+        btn.disabled = true;
+
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ 
+                action: "venta", 
+                fila: parseInt(fila), 
+                cantidad: parseInt(cantidad),
+                metodo: metodo,
+                cliente: cliente 
+            })
+        });
+
+        alert("Venta registrada en el Excel");
+
+        if (metodo === "Fiado") {
+            const mensaje = `Hola ${cliente}, te escribo de Amare Beauty. Este es un recordatorio de tu compra de: ${nombreProd} por un valor total de $... pendiente de pago. ✨`;
+            const wsLink = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+            window.open(wsLink, '_blank');
+        }
+
+        // Resetear
+        document.getElementById('nombre-cliente').value = "";
+        document.getElementById('tel-cliente').value = "";
+        document.getElementById('campos-fiado').style.display = "none";
+        btn.innerText = "REGISTRAR VENTA";
+        btn.disabled = false;
+        cargarDesdeDrive();
+
     } catch (e) {
-        if (syncBtn) syncBtn.innerText = "❌";
+        alert("Error de conexión");
+        btn.disabled = false;
     }
 }
 
+// FUNCIONES BASE SE MANTIENEN IGUAL
 function calcularTotales() {
-    let dineroTotal = 0;
-    inventario.forEach(p => {
-        dineroTotal += ((parseFloat(p.vendidos) || 0) * (parseFloat(p.precio) || 0));
-    });
-    document.getElementById('gran-total-dinero').innerText = `$${dineroTotal.toLocaleString()}`;
+    let t = 0;
+    inventario.forEach(p => t += (parseFloat(p.vendidos)||0) * (parseFloat(p.precio)||0));
+    document.getElementById('gran-total-dinero').innerText = `$${t.toLocaleString()}`;
 }
 
 function renderInventario() {
@@ -33,84 +87,36 @@ function renderInventario() {
     lista.innerHTML = '';
     inventario.forEach(p => {
         const li = document.createElement('li');
-        const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        const sinStock = stockActual <= 0;
-        li.innerHTML = `
-            <div style="flex-grow:1">
-                <strong>${p.nombre}</strong>
-                <small>Vendidos: ${p.vendidos || 0}</small>
-            </div>
-            <div style="text-align:right">
-                <span class="stock-badge ${sinStock ? 'bg-empty' : 'bg-ok'}">
-                    ${sinStock ? "SIN STOCK" : 'Cant: ' + stockActual}
-                </span><br>
-                <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
-            </div>`;
+        const disp = (parseFloat(p.stock)||0) - (parseFloat(p.vendidos)||0);
+        li.innerHTML = `<div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${p.vendidos||0}</small></div>
+            <div style="text-align:right"><span class="stock-badge ${disp<=0?'bg-empty':'bg-ok'}">${disp<=0?'SIN STOCK':'Cant: '+disp}</span><br>
+            <strong>$${parseFloat(p.precio||0).toLocaleString()}</strong></div>`;
         lista.appendChild(li);
     });
 }
 
-async function registrarVenta() {
-    const fila = document.getElementById('select-producto').value;
-    const cantidad = parseInt(document.getElementById('cant-venta').value);
-    const metodo = document.getElementById('metodo-pago').value;
-    const btn = document.querySelector('.btn-save');
-    
-    if (!fila || isNaN(cantidad)) return alert("Datos incompletos");
-
-    try {
-        btn.innerText = "PROCESANDO...";
-        btn.disabled = true;
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify({ 
-                action: "venta", 
-                fila: parseInt(fila), 
-                cantidad: cantidad,
-                metodo: metodo 
-            })
-        });
-        alert(`Venta registrada como ${metodo}`);
-        btn.innerText = "REGISTRAR VENTA";
-        btn.disabled = false;
-        cargarDesdeDrive(); 
-    } catch (e) {
-        alert("Error al registrar");
-        btn.disabled = false;
-    }
-}
-
-function switchTab(tab) {
-    document.getElementById('sec-inventario').style.display = tab === 'inventario' ? 'block' : 'none';
-    document.getElementById('sec-ventas').style.display = tab === 'ventas' ? 'block' : 'none';
-    document.getElementById('tab-inv').className = tab === 'inventario' ? 'active' : '';
-    document.getElementById('tab-ven').className = tab === 'ventas' ? 'active' : '';
-    if(tab === 'ventas') actualizarSelect();
+function switchTab(t) {
+    document.getElementById('sec-inventario').style.display = t==='inventario'?'block':'none';
+    document.getElementById('sec-ventas').style.display = t==='ventas'?'block':'none';
+    document.getElementById('tab-inv').className = t==='inventario'?'active':'';
+    document.getElementById('tab-ven').className = t==='ventas'?'active':'';
+    if(t==='ventas') actualizarSelect();
 }
 
 function actualizarSelect() {
-    const select = document.getElementById('select-producto');
-    if (!select) return;
-    select.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
-    }).join('');
+    const s = document.getElementById('select-producto');
+    s.innerHTML = inventario.map(p => `<option value="${p.filaOriginal}">${p.nombre}</option>`).join('');
 }
 
 function filtrarProductos() {
-    const texto = document.getElementById('busqueda').value.toLowerCase();
-    document.querySelectorAll('#lista-inventario li').forEach(item => {
-        item.style.display = item.textContent.toLowerCase().includes(texto) ? 'flex' : 'none';
-    });
+    const txt = document.getElementById('busqueda').value.toLowerCase();
+    document.querySelectorAll('#lista-inventario li').forEach(i => i.style.display = i.textContent.toLowerCase().includes(txt)?'flex':'none');
 }
 
 window.onload = () => {
-    const stored = localStorage.getItem('inventario');
-    if(stored) {
-        inventario = JSON.parse(stored);
-        renderInventario();
-        calcularTotales();
+    if(localStorage.getItem('inventario')) {
+        inventario = JSON.parse(localStorage.getItem('inventario'));
+        renderInventario(); calcularTotales();
     }
     cargarDesdeDrive();
 };
