@@ -7,26 +7,43 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <h1>Mi Negocio</h1>
-        <div id="balance-card">
-            <p>Balance Total</p>
-            <h2 id="total-balance">$0.00</h2>
+    <div class="app-container">
+        <header>
+            <h1>Mi Negocio</h1>
+            <div class="balance-card">
+                <span>Balance Total</span>
+                <h2 id="total-balance">$0.00</h2>
+                <div class="summary">
+                    <div class="income">↑ <span id="total-income">$0</span></div>
+                    <div class="expense">↓ <span id="total-expense">$0</span></div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="actions">
+                <button onclick="showModal('ingreso')" class="btn-add">+ Ingreso</button>
+                <button onclick="showModal('gasto')" class="btn-sub">- Gasto</button>
+            </div>
+
+            <section class="history">
+                <h3>Movimientos Recientes</h3>
+                <ul id="transaction-list"></ul>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Registrar</h3>
+            <input type="text" id="desc" placeholder="Descripción (ej. Venta de café)">
+            <input type="number" id="amount" placeholder="Monto $">
+            <div class="modal-buttons">
+                <button onclick="closeModal()" class="btn-cancel">Cancelar</button>
+                <button onclick="saveTransaction()" class="btn-save">Guardar</button>
+            </div>
         </div>
-    </header>
-
-    <main>
-        <section id="actions">
-            <button onclick="openModal('venta')">+ Registrar Venta</button>
-            <button onclick="openModal('gasto')" class="btn-gasto">- Registrar Gasto</button>
-        </section>
-
-        <section id="recent-activity">
-            <h3>Actividad Reciente</h3>
-            <ul id="transaction-list">
-                </ul>
-        </section>
-    </main>
+    </div>
 
     <script src="app.js"></script>
 </body>
