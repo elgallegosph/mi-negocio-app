@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxK-LXWHx8C_bYc8G4U_-ggPOCyB-7Cg_xktF-VX_oFr1rD820BTJfjvdVpVKeQir-PNQ/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxT0uBAU5hsnreZ_weWT4H3nTOWG12rqzGaa-XNsb2VJITMyP59dRtnC_H2Kn7hnrCcZg/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -22,9 +22,9 @@ async function cargarDesdeDrive() {
 }
 
 function calcularTotales() {
-    // CORRECCIÓN: Suma el valor de la columna L (Venta Total) de cada fila del Drive
-    let totalAcumulado = inventario.reduce((acc, p) => acc + (parseFloat(p.totalFila) || 0), 0);
-    document.getElementById('gran-total-dinero').innerText = `$${totalAcumulado.toLocaleString()}`;
+    // SUMA DIRECTA DE LA COLUMNA L (Venta Total) TRAÍDA DEL DRIVE
+    let totalRealDrive = inventario.reduce((acc, p) => acc + (parseFloat(p.totalFila) || 0), 0);
+    document.getElementById('gran-total-dinero').innerText = `$${totalRealDrive.toLocaleString()}`;
 }
 
 async function registrarVenta() {
