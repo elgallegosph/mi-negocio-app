@@ -1,4 +1,5 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAHU7O94KMzHwcZdKGfOhRC8S9n8qS9HWyN60uyjUdULTJmBrNm0ONOykdgT9vqP7fzw/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbws_mR6bAfwDnXdCOGtbqDVCc7pXo41d7zk9euRrTBL0JfaUuUGMLuHB-ghJXrszRN-_w/exec"; 
+const CODIGO_PAIS = "57"; // Cambia esto si usas otro país
 let inventario = [];
 
 async function cargarDesdeDrive() {
@@ -24,21 +25,24 @@ async function registrarVenta() {
     const cantidadVenta = parseInt(document.getElementById('cant-venta').value);
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
-    const telefono = document.getElementById('tel-cliente').value;
+    let telInput = document.getElementById('tel-cliente').value.replace(/\s+/g, ''); // Quitar espacios
     const btn = document.querySelector('.btn-save');
 
     if (!fila) return alert("Selecciona un producto");
 
-    // VALIDACIÓN DE STOCK REAL
+    // Validar Stock
     const productoData = inventario.find(p => p.filaOriginal == fila);
     const stockDisponible = (parseFloat(productoData.stock) || 0) - (parseFloat(productoData.vendidos) || 0);
 
-    if (stockDisponible <= 0) {
-        return alert(`❌ ERROR: El producto "${productoData.nombre}" está AGOTADO.`);
+    if (stockDisponible < cantidadVenta) {
+        return alert(`Stock insuficiente. Solo quedan ${stockDisponible} unidades.`);
     }
 
-    if (cantidadVenta > stockDisponible) {
-        return alert(`⚠️ No puedes vender ${cantidadVenta}. Solo quedan ${stockDisponible} unidades.`);
+    // FORMATEAR TELÉFONO AUTOMÁTICAMENTE
+    let telefonoFinal = "N/A";
+    if (telInput) {
+        // Si el usuario no puso el código de país, se lo ponemos nosotros
+        telefonoFinal = telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput;
     }
 
     try {
@@ -55,21 +59,24 @@ async function registrarVenta() {
                 cantidad: cantidadVenta,
                 metodo: metodo,
                 cliente: cliente,
-                telefono: telefono || "N/A"
+                telefono: telefonoFinal
             })
         });
 
-        alert("Venta registrada con éxito.");
+        alert("¡Venta registrada!");
 
-        // WhatsApp
-        if (telefono && telefono !== "N/A") {
-            let mensaje = (metodo === "Efectivo" || metodo === "Transferencia") 
-                ? `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty.`
-                : `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} como ${metodo}. ✨`;
-            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        // Envío de WhatsApp
+        if (telefonoFinal !== "N/A") {
+            let mensaje = "";
+            if (metodo === "Efectivo" || metodo === "Transferencia") {
+                mensaje = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`;
+            } else {
+                const estado = (metodo === "Fiado") ? "pendiente de pago" : "como separado";
+                mensaje = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} en Amare Beauty ${estado}. ✨`;
+            }
+            window.open(`https://wa.me/${telefonoFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
-        // Limpiar campos y recargar para actualizar stock en la UI
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
         btn.innerText = "REGISTRAR VENTA";
@@ -77,7 +84,7 @@ async function registrarVenta() {
         cargarDesdeDrive();
 
     } catch (e) {
-        alert("Error de conexión");
+        alert("Error al conectar");
         btn.disabled = false;
     }
 }
