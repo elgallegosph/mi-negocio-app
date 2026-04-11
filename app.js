@@ -21,13 +21,25 @@ async function registrarVenta() {
     const productoSelect = document.getElementById('select-producto');
     const fila = productoSelect.value;
     const nombreProd = productoSelect.options[productoSelect.selectedIndex].text;
-    const cantidad = document.getElementById('cant-venta').value;
+    const cantidadVenta = parseInt(document.getElementById('cant-venta').value);
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
     const telefono = document.getElementById('tel-cliente').value;
     const btn = document.querySelector('.btn-save');
 
     if (!fila) return alert("Selecciona un producto");
+
+    // VALIDACIÓN DE STOCK REAL
+    const productoData = inventario.find(p => p.filaOriginal == fila);
+    const stockDisponible = (parseFloat(productoData.stock) || 0) - (parseFloat(productoData.vendidos) || 0);
+
+    if (stockDisponible <= 0) {
+        return alert(`❌ ERROR: El producto "${productoData.nombre}" está AGOTADO.`);
+    }
+
+    if (cantidadVenta > stockDisponible) {
+        return alert(`⚠️ No puedes vender ${cantidadVenta}. Solo quedan ${stockDisponible} unidades.`);
+    }
 
     try {
         btn.innerText = "PROCESANDO...";
@@ -40,32 +52,24 @@ async function registrarVenta() {
                 action: "venta", 
                 fila: parseInt(fila), 
                 productoNombre: nombreProd,
-                cantidad: parseInt(cantidad),
+                cantidad: cantidadVenta,
                 metodo: metodo,
                 cliente: cliente,
                 telefono: telefono || "N/A"
             })
         });
 
-        alert("Venta registrada con éxito");
+        alert("Venta registrada con éxito.");
 
-        // LÓGICA DE WHATSAPP
+        // WhatsApp
         if (telefono && telefono !== "N/A") {
-            let mensaje = "";
-            
-            if (metodo === "Efectivo" || metodo === "Transferencia") {
-                // MENSAJE DE AGRADECIMIENTO
-                mensaje = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ¡Esperamos que lo disfrutes mucho! ❤️`;
-            } else {
-                // MENSAJE DE RECORDATORIO (Fiado o Separado)
-                const estado = (metodo === "Fiado") ? "pendiente de pago" : "como separado";
-                mensaje = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} en Amare Beauty ${estado}. ✨`;
-            }
-
+            let mensaje = (metodo === "Efectivo" || metodo === "Transferencia") 
+                ? `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty.`
+                : `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} como ${metodo}. ✨`;
             window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
-        // Limpieza
+        // Limpiar campos y recargar para actualizar stock en la UI
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
         btn.innerText = "REGISTRAR VENTA";
@@ -109,7 +113,10 @@ function switchTab(t) {
 
 function actualizarSelect() {
     const s = document.getElementById('select-producto');
-    s.innerHTML = inventario.map(p => `<option value="${p.filaOriginal}">${p.nombre}</option>`).join('');
+    s.innerHTML = inventario.map(p => {
+        const disp = (parseFloat(p.stock)||0) - (parseFloat(p.vendidos)||0);
+        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
+    }).join('');
 }
 
 function filtrarProductos() {
