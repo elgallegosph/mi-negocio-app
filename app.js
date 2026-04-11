@@ -1,33 +1,74 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsLBjzhxpZe4Au7owenNpaPr46R7OfFExbcRMk_a4eCXh0coYM9OGCH9AASjzVXJYD8w/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRUZ4l1YQ22R8vX1vE1q9Ks3Cr8C4WzaHsjjZSBaxpIiAcAnL1Pf9OwObG62JyrPVtzg/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
-let totalDriveL26 = 0;
 let charts = {};
 
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
-    if (syncBtn) syncBtn.innerText = "⏳";
+    if (syncBtn) syncBtn.innerText = "⏳ Cargando...";
+    
     try {
         const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
         
-        inventario = data.inventario;
-        historial = data.historial;
-        totalDriveL26 = data.totalVentas; // El valor de L26 del Drive
+        if(data.error) {
+            console.error("Error en Drive:", data.error);
+            return;
+        }
+
+        inventario = data.inventario || [];
+        historial = data.historial || [];
+        
+        // Mostrar el total directamente desde L26
+        document.getElementById('gran-total-dinero').innerText = `$${parseFloat(data.totalVentas || 0).toLocaleString()}`;
         
         renderInventario();
-        mostrarTotal();
         actualizarSelect();
         
-        if (syncBtn) syncBtn.innerText = "🔄";
-    } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
+        if (syncBtn) syncBtn.innerText = "🔄 Actualizar";
+    } catch (e) { 
+        console.error("Error de conexión:", e);
+        if (syncBtn) syncBtn.innerText = "❌ Error"; 
+    }
 }
 
-function mostrarTotal() {
-    // Mostramos el valor de L26 formateado
-    const banner = document.getElementById('gran-total-dinero');
-    banner.innerText = `$${parseFloat(totalDriveL26 || 0).toLocaleString()}`;
+function renderInventario() {
+    const lista = document.getElementById('lista-inventario');
+    if (!lista) return;
+    
+    if (inventario.length === 0) {
+        lista.innerHTML = "<li>No se encontraron productos</li>";
+        return;
+    }
+
+    lista.innerHTML = inventario.map(p => {
+        const stockInicial = parseFloat(p.stock) || 0;
+        const vendidos = parseFloat(p.vendidos) || 0;
+        const disp = stockInicial - vendidos;
+        
+        return `<li>
+            <div style="flex-grow:1">
+                <strong>${p.nombre}</strong><br>
+                <small>Vendidos: ${vendidos}</small>
+            </div>
+            <div style="text-align:right">
+                <span class="stock-badge ${disp <= 0 ? 'bg-empty' : 'bg-ok'}">
+                    ${disp <= 0 ? 'AGOTADO' : 'Cant: ' + disp}
+                </span><br>
+                <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
+            </div>
+        </li>`;
+    }).join('');
+}
+
+function actualizarSelect() {
+    const s = document.getElementById('select-producto');
+    if (!s) return;
+    s.innerHTML = inventario.map(p => {
+        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
+    }).join('');
 }
 
 async function registrarVenta() {
@@ -43,10 +84,11 @@ async function registrarVenta() {
     const p = inventario.find(item => item.filaOriginal == fila);
     const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
     
-    if (disp < cantidad) return alert("¡Stock insuficiente!");
+    if (disp < cantidad) return alert("¡No hay suficiente stock!");
 
     let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
     btn.disabled = true;
+    btn.innerText = "PROCESANDO...";
 
     try {
         await fetch(SCRIPT_URL, {
@@ -65,26 +107,17 @@ async function registrarVenta() {
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
-        alert("Venta registrada");
+        alert("¡Venta registrada con éxito!");
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
         btn.disabled = false;
+        btn.innerText = "REGISTRAR VENTA";
         cargarDesdeDrive();
-    } catch (e) { alert("Error"); btn.disabled = false; }
-}
-
-function renderInventario() {
-    const lista = document.getElementById('lista-inventario');
-    lista.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<li>
-            <div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${p.vendidos || 0}</small></div>
-            <div style="text-align:right">
-                <span class="stock-badge ${disp <= 0 ? 'bg-empty' : 'bg-ok'}">${disp <= 0 ? 'AGOTADO' : 'Cant: ' + disp}</span><br>
-                <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
-            </div>
-        </li>`;
-    }).join('');
+    } catch (e) { 
+        alert("Error al registrar"); 
+        btn.disabled = false; 
+        btn.innerText = "REGISTRAR VENTA";
+    }
 }
 
 function filtrarProductos() {
@@ -92,14 +125,6 @@ function filtrarProductos() {
     document.querySelectorAll('#lista-inventario li').forEach(li => {
         li.style.display = li.textContent.toLowerCase().includes(txt) ? 'flex' : 'none';
     });
-}
-
-function actualizarSelect() {
-    const s = document.getElementById('select-producto');
-    s.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
-    }).join('');
 }
 
 function switchTab(t) {
@@ -113,12 +138,14 @@ function switchTab(t) {
 function generarGraficos() {
     if (charts.m) charts.m.destroy();
     if (charts.p) charts.p.destroy();
+    
     const met = historial.reduce((a, c) => (a[c.metodo] = (a[c.metodo] || 0) + 1, a), {});
     charts.m = new Chart(document.getElementById('chartMetodos'), {
         type: 'pie',
         data: { labels: Object.keys(met), datasets: [{ data: Object.values(met), backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56'] }] },
         options: { plugins: { title: { display: true, text: 'Métodos de Pago' } } }
     });
+
     const pro = historial.reduce((a, c) => (a[c.producto] = (a[c.producto] || 0) + c.cantidad, a), {});
     const top = Object.entries(pro).sort((a,b) => b[1]-a[1]).slice(0, 5);
     charts.p = new Chart(document.getElementById('chartProductos'), {
