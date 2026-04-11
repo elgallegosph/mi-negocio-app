@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyiGlBgcrLkuoXCXKTAiJx-k283AQkrkW_SXJQgBDfKzZNKV0kaKPMHCF1S52nTG78PIA/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzhUT653aK2z7Rk6cpxbSJjeMXivLbRAUefak4vt3RFEO62EstSwK4iXGLdqQjg5Ng7yA/exec"; 
 let inventario = [];
 
 async function cargarDesdeDrive() {
@@ -17,10 +17,11 @@ async function cargarDesdeDrive() {
     } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
 }
 
-function verificarFiado() {
+function verificarMetodoEspecial() {
     const metodo = document.getElementById('metodo-pago').value;
-    const campos = document.getElementById('campos-fiado');
-    campos.style.display = (metodo === "Fiado") ? "block" : "none";
+    const campos = document.getElementById('campos-cliente');
+    // Mostrar campos si es Separado o Fiado
+    campos.style.display = (metodo === "Fiado" || metodo === "Separado") ? "block" : "none";
 }
 
 async function registrarVenta() {
@@ -34,10 +35,12 @@ async function registrarVenta() {
     const btn = document.querySelector('.btn-save');
 
     if (!fila) return alert("Selecciona un producto");
-    if (metodo === "Fiado" && (!cliente || !telefono)) return alert("Faltan datos del cliente");
+    if ((metodo === "Fiado" || metodo === "Separado") && (!cliente || !telefono)) {
+        return alert("Faltan datos de contacto del cliente");
+    }
 
     try {
-        btn.innerText = "REGISTRANDO...";
+        btn.innerText = "PROCESANDO...";
         btn.disabled = true;
 
         await fetch(SCRIPT_URL, {
@@ -48,22 +51,25 @@ async function registrarVenta() {
                 fila: parseInt(fila), 
                 cantidad: parseInt(cantidad),
                 metodo: metodo,
-                cliente: cliente 
+                cliente: cliente,
+                telefono: telefono
             })
         });
 
-        alert("Venta registrada en el Excel");
+        alert("Registro completado en Excel");
 
-        if (metodo === "Fiado") {
-            const mensaje = `Hola ${cliente}, te escribo de Amare Beauty. Este es un recordatorio de tu compra de: ${nombreProd} por un valor total de $... pendiente de pago. ✨`;
+        // Enviar WhatsApp si es Fiado o Separado
+        if (metodo === "Fiado" || metodo === "Separado") {
+            const tipoMsg = metodo === "Fiado" ? "pendiente de pago" : "separado";
+            const mensaje = `Hola ${cliente}, te escribo de Amare Beauty. Confirmamos tu pedido de ${nombreProd} (${cantidad} und) como ${tipoMsg}. ✨`;
             const wsLink = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
             window.open(wsLink, '_blank');
         }
 
-        // Resetear
+        // Limpieza
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
-        document.getElementById('campos-fiado').style.display = "none";
+        document.getElementById('campos-cliente').style.display = "none";
         btn.innerText = "REGISTRAR VENTA";
         btn.disabled = false;
         cargarDesdeDrive();
@@ -74,7 +80,6 @@ async function registrarVenta() {
     }
 }
 
-// FUNCIONES BASE SE MANTIENEN IGUAL
 function calcularTotales() {
     let t = 0;
     inventario.forEach(p => t += (parseFloat(p.vendidos)||0) * (parseFloat(p.precio)||0));
