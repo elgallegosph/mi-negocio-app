@@ -1,7 +1,8 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJfK1fsFXiosjxiIYNNkOStmU6DtN8IEtBIP_9BLK9MQmtIGk0TDs0zU47jp7uHgTT6A/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVVHfgIq4_fFj01RJ64X4KbNrzzT6DknYd8nTM2pZDP5kEDusmbSTYTmrT-QNrmfWiSQ/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
+let totalDriveK26 = 0;
 let charts = {};
 
 async function cargarDesdeDrive() {
@@ -10,26 +11,23 @@ async function cargarDesdeDrive() {
     try {
         const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
+        
         inventario = data.inventario;
         historial = data.historial;
+        totalDriveK26 = data.totalVentas; // El valor de K26 del Drive
         
         renderInventario();
-        calcularTotales(); // Aquí se hace la multiplicación K x E
+        mostrarTotal();
         actualizarSelect();
         
         if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
 }
 
-function calcularTotales() {
-    // OPERACIÓN: Sumar (Precio Columna E * Cantidad Vendida Columna K) de cada producto
-    let totalCalculado = inventario.reduce((acc, p) => {
-        let precio = parseFloat(p.precio) || 0;
-        let cantidadVendida = parseFloat(p.vendidos) || 0;
-        return acc + (precio * cantidadVendida);
-    }, 0);
-    
-    document.getElementById('gran-total-dinero').innerText = `$${totalCalculado.toLocaleString()}`;
+function mostrarTotal() {
+    // Mostramos el valor de K26 formateado
+    const banner = document.getElementById('gran-total-dinero');
+    banner.innerText = `$${parseFloat(totalDriveK26 || 0).toLocaleString()}`;
 }
 
 async function registrarVenta() {
