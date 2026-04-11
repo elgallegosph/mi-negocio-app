@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6XzyLnsSooDcxYvO1bVGM2BmLPUtwnik21fqompxez1wIYWIE7r57mFWErEySKRon/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6XzyLnsSooDcxYvO1bVGM2BmLPUtwnik21fqompxez1wIYWIE7r57mFWErEySKRon/exeC"; 
 let inventario = [];
 
 async function cargarDesdeDrive() {
