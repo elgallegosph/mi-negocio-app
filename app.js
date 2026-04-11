@@ -1,8 +1,8 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVVHfgIq4_fFj01RJ64X4KbNrzzT6DknYd8nTM2pZDP5kEDusmbSTYTmrT-QNrmfWiSQ/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsLBjzhxpZe4Au7owenNpaPr46R7OfFExbcRMk_a4eCXh0coYM9OGCH9AASjzVXJYD8w/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
-let totalDriveK26 = 0;
+let totalDriveL26 = 0;
 let charts = {};
 
 async function cargarDesdeDrive() {
@@ -14,7 +14,7 @@ async function cargarDesdeDrive() {
         
         inventario = data.inventario;
         historial = data.historial;
-        totalDriveK26 = data.totalVentas; // El valor de K26 del Drive
+        totalDriveL26 = data.totalVentas; // El valor de L26 del Drive
         
         renderInventario();
         mostrarTotal();
@@ -25,9 +25,9 @@ async function cargarDesdeDrive() {
 }
 
 function mostrarTotal() {
-    // Mostramos el valor de K26 formateado
+    // Mostramos el valor de L26 formateado
     const banner = document.getElementById('gran-total-dinero');
-    banner.innerText = `$${parseFloat(totalDriveK26 || 0).toLocaleString()}`;
+    banner.innerText = `$${parseFloat(totalDriveL26 || 0).toLocaleString()}`;
 }
 
 async function registrarVenta() {
