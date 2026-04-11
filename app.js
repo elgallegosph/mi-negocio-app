@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxT0uBAU5hsnreZ_weWT4H3nTOWG12rqzGaa-XNsb2VJITMyP59dRtnC_H2Kn7hnrCcZg/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJfK1fsFXiosjxiIYNNkOStmU6DtN8IEtBIP_9BLK9MQmtIGk0TDs0zU47jp7uHgTT6A/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -14,7 +14,7 @@ async function cargarDesdeDrive() {
         historial = data.historial;
         
         renderInventario();
-        calcularTotales();
+        calcularTotales(); // Aquí se hace la multiplicación K x E
         actualizarSelect();
         
         if (syncBtn) syncBtn.innerText = "🔄";
@@ -22,9 +22,14 @@ async function cargarDesdeDrive() {
 }
 
 function calcularTotales() {
-    // SUMA DIRECTA DE LA COLUMNA L (Venta Total) TRAÍDA DEL DRIVE
-    let totalRealDrive = inventario.reduce((acc, p) => acc + (parseFloat(p.totalFila) || 0), 0);
-    document.getElementById('gran-total-dinero').innerText = `$${totalRealDrive.toLocaleString()}`;
+    // OPERACIÓN: Sumar (Precio Columna E * Cantidad Vendida Columna K) de cada producto
+    let totalCalculado = inventario.reduce((acc, p) => {
+        let precio = parseFloat(p.precio) || 0;
+        let cantidadVendida = parseFloat(p.vendidos) || 0;
+        return acc + (precio * cantidadVendida);
+    }, 0);
+    
+    document.getElementById('gran-total-dinero').innerText = `$${totalCalculado.toLocaleString()}`;
 }
 
 async function registrarVenta() {
@@ -38,7 +43,8 @@ async function registrarVenta() {
     const btn = document.querySelector('.btn-save');
 
     const p = inventario.find(item => item.filaOriginal == fila);
-    const disp = (p.stock || 0) - (p.vendidos || 0);
+    const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+    
     if (disp < cantidad) return alert("¡Stock insuficiente!");
 
     let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
@@ -72,7 +78,7 @@ async function registrarVenta() {
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
     lista.innerHTML = inventario.map(p => {
-        const disp = (p.stock || 0) - (p.vendidos || 0);
+        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         return `<li>
             <div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${p.vendidos || 0}</small></div>
             <div style="text-align:right">
@@ -93,7 +99,7 @@ function filtrarProductos() {
 function actualizarSelect() {
     const s = document.getElementById('select-producto');
     s.innerHTML = inventario.map(p => {
-        const disp = p.stock - p.vendidos;
+        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
     }).join('');
 }
