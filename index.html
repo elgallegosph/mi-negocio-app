@@ -38,15 +38,15 @@
                     <input type="number" id="cant-venta" value="1" min="1">
 
                     <label>Método de Pago:</label>
-                    <select id="metodo-pago" onchange="verificarMetodoEspecial()">
+                    <select id="metodo-pago">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Transferencia">📱 Transferencia</option>
                         <option value="Separado">📦 Separado</option>
                         <option value="Fiado">📝 Fiado</option>
                     </select>
 
-                    <div id="campos-cliente" style="display:none; margin-top:10px; border-left: 3px solid #d63384; padding-left: 10px;">
-                        <label id="label-cliente">Nombre del Cliente:</label>
+                    <div id="campos-cliente" style="margin-top:10px; border-left: 3px solid #d63384; padding-left: 10px;">
+                        <label>Nombre del Cliente (Marketing):</label>
                         <input type="text" id="nombre-cliente" placeholder="Ej: Maria Lopez">
                         <label>WhatsApp (Sin espacios):</label>
                         <input type="tel" id="tel-cliente" placeholder="573001234567">
