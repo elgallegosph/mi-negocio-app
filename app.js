@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaOMkdmp1D0-mrJxj_3JWVsR43rE94oj3ZnKHv6vBQPcmShEhUjYPYPseBO79gDjrhpw/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAHU7O94KMzHwcZdKGfOhRC8S9n8qS9HWyN60uyjUdULTJmBrNm0ONOykdgT9vqP7fzw/exec"; 
 let inventario = [];
 
 async function cargarDesdeDrive() {
@@ -23,7 +23,7 @@ async function registrarVenta() {
     const nombreProd = productoSelect.options[productoSelect.selectedIndex].text;
     const cantidad = document.getElementById('cant-venta').value;
     const metodo = document.getElementById('metodo-pago').value;
-    const cliente = document.getElementById('nombre-cliente').value;
+    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
     const telefono = document.getElementById('tel-cliente').value;
     const btn = document.querySelector('.btn-save');
 
@@ -42,17 +42,27 @@ async function registrarVenta() {
                 productoNombre: nombreProd,
                 cantidad: parseInt(cantidad),
                 metodo: metodo,
-                cliente: cliente || "Cliente General",
+                cliente: cliente,
                 telefono: telefono || "N/A"
             })
         });
 
-        alert(`Venta registrada y datos de ${cliente} guardados.`);
+        alert("Venta registrada con éxito");
 
-        // Solo abre WhatsApp si es Fiado o Separado (Recordatorio)
-        if ((metodo === "Fiado" || metodo === "Separado") && telefono !== "N/A") {
-            const msg = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} como ${metodo}. ✨`;
-            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
+        // LÓGICA DE WHATSAPP
+        if (telefono && telefono !== "N/A") {
+            let mensaje = "";
+            
+            if (metodo === "Efectivo" || metodo === "Transferencia") {
+                // MENSAJE DE AGRADECIMIENTO
+                mensaje = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ¡Esperamos que lo disfrutes mucho! ❤️`;
+            } else {
+                // MENSAJE DE RECORDATORIO (Fiado o Separado)
+                const estado = (metodo === "Fiado") ? "pendiente de pago" : "como separado";
+                mensaje = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} en Amare Beauty ${estado}. ✨`;
+            }
+
+            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
         // Limpieza
