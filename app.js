@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdv8493bb4YEa0xGqt3Do-m2igzE5HKwUNFhNndp_glFQh3104_5Qz-0rDoAlcalz38A/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaOMkdmp1D0-mrJxj_3JWVsR43rE94oj3ZnKHv6vBQPcmShEhUjYPYPseBO79gDjrhpw/exec"; 
 let inventario = [];
 
 async function cargarDesdeDrive() {
@@ -15,12 +15,6 @@ async function cargarDesdeDrive() {
         }
         if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
-}
-
-function verificarMetodoEspecial() {
-    const metodo = document.getElementById('metodo-pago').value;
-    const campos = document.getElementById('campos-cliente');
-    campos.style.display = (metodo === "Fiado" || metodo === "Separado") ? "block" : "none";
 }
 
 async function registrarVenta() {
@@ -48,19 +42,20 @@ async function registrarVenta() {
                 productoNombre: nombreProd,
                 cantidad: parseInt(cantidad),
                 metodo: metodo,
-                cliente: cliente || "",
-                telefono: telefono || ""
+                cliente: cliente || "Cliente General",
+                telefono: telefono || "N/A"
             })
         });
 
-        alert("¡Venta registrada!");
+        alert(`Venta registrada y datos de ${cliente} guardados.`);
 
-        if (metodo === "Fiado" || metodo === "Separado") {
+        // Solo abre WhatsApp si es Fiado o Separado (Recordatorio)
+        if ((metodo === "Fiado" || metodo === "Separado") && telefono !== "N/A") {
             const msg = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} como ${metodo}. ✨`;
             window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        // Limpieza y Recarga
+        // Limpieza
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
         btn.innerText = "REGISTRAR VENTA";
@@ -68,7 +63,7 @@ async function registrarVenta() {
         cargarDesdeDrive();
 
     } catch (e) {
-        alert("Error de red");
+        alert("Error de conexión");
         btn.disabled = false;
     }
 }
