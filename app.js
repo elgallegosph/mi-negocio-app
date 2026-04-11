@@ -1,103 +1,111 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6hShZ8dPGQpHvtechXGkQ_zlqng2y1SjCCnePK7ks3Xg64KuK6Ac0LWvd9JZDnOeTvw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxX3-LLOWaRjNezbUNzC7NcBpSRGiHPNXZYPU7gtbrEJ5ObezhIxrEvb00zOXxkmQkdKQ/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
 let charts = {};
 
 async function cargarDesdeDrive() {
+    const syncBtn = document.getElementById('sync-btn');
+    if (syncBtn) syncBtn.innerText = "⏳";
     try {
         const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
         inventario = data.inventario;
         historial = data.historial;
+        
         renderInventario();
+        calcularTotales();
         actualizarSelect();
-        if(document.getElementById('sec-stats').style.display === 'block') generarGraficos();
-    } catch (e) { console.error("Error cargando datos"); }
+        
+        if (syncBtn) syncBtn.innerText = "🔄";
+    } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
 }
 
-function generarGraficos() {
-    // 1. Destruir gráficos anteriores para recargar
-    if (charts.metodos) charts.metodos.destroy();
-    if (charts.prods) charts.prods.destroy();
-
-    // 2. Procesar Datos de Métodos
-    const metodosData = historial.reduce((acc, curr) => {
-        acc[curr.metodo] = (acc[curr.metodo] || 0) + 1;
-        return acc;
-    }, {});
-
-    charts.metodos = new Chart(document.getElementById('chartMetodos'), {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(metodosData),
-            datasets: [{
-                label: 'Ventas por Método',
-                data: Object.values(metodosData),
-                backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56']
-            }]
-        },
-        options: { plugins: { title: { display: true, text: 'Preferencia de Pago' } } }
-    });
-
-    // 3. Procesar Productos más vendidos
-    const prodsData = historial.reduce((acc, curr) => {
-        acc[curr.producto] = (acc[curr.producto] || 0) + curr.cantidad;
-        return acc;
-    }, {});
-
-    const sortedProds = Object.entries(prodsData).sort((a,b) => b[1]-a[1]).slice(0, 5);
-
-    charts.prods = new Chart(document.getElementById('chartProductos'), {
-        type: 'bar',
-        data: {
-            labels: sortedProds.map(p => p[0]),
-            datasets: [{
-                label: 'Unidades Vendidas',
-                data: sortedProds.map(p => p[1]),
-                backgroundColor: '#d63384'
-            }]
-        },
-        options: { 
-            indexAxis: 'y',
-            plugins: { title: { display: true, text: 'Top 5 Productos' } } 
-        }
-    });
-}
-
-// FUNCIONES DE VENTA Y NAVEGACIÓN
 async function registrarVenta() {
-    const fila = document.getElementById('select-producto').value;
-    const nombreProd = document.getElementById('select-producto').options[document.getElementById('select-producto').selectedIndex].text;
+    const select = document.getElementById('select-producto');
+    const fila = select.value;
+    const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
     const cantidad = parseInt(document.getElementById('cant-venta').value);
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
-    let tel = document.getElementById('tel-cliente').value.replace(/\s+/g, '');
-    
-    if(!fila) return alert("Seleccione producto");
-    
-    const prod = inventario.find(p => p.filaOriginal == fila);
-    if((prod.stock - prod.vendidos) < cantidad) return alert("Sin stock suficiente");
-
-    const telFinal = tel ? (tel.startsWith(CODIGO_PAIS) ? tel : CODIGO_PAIS + tel) : "N/A";
-
+    let telInput = document.getElementById('tel-cliente').value.replace(/\s+/g, '');
     const btn = document.querySelector('.btn-save');
-    btn.disabled = true;
-    
-    await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify({ action: "venta", fila: parseInt(fila), productoNombre: nombreProd, cantidad, metodo, cliente, telefono: telFinal })
-    });
 
-    alert("Venta Registrada");
-    if(telFinal !== "N/A") {
-        const msg = metodo === "Fiado" ? `Recordatorio de pago para ${cliente}` : `Gracias por tu compra ${cliente}`;
-        window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
-    }
-    
-    btn.disabled = false;
-    cargarDesdeDrive();
+    // Validar Stock
+    const p = inventario.find(item => item.filaOriginal == fila);
+    const disp = (p.stock || 0) - (p.vendidos || 0);
+    if (disp < cantidad) return alert("¡Stock insuficiente!");
+
+    let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
+
+    btn.disabled = true;
+    btn.innerText = "REGISTRANDO...";
+
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({
+                action: "venta", fila: parseInt(fila), productoNombre: nombreProd,
+                cantidad, metodo, cliente, telefono: telFinal
+            })
+        });
+
+        // Lógica de Mensajes Originales
+        if (telFinal !== "N/A") {
+            let mensaje = "";
+            if (metodo === "Efectivo" || metodo === "Transferencia") {
+                mensaje = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`;
+            } else {
+                const tipo = (metodo === "Fiado") ? "pendiente de pago" : "como separado";
+                mensaje = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} en Amare Beauty ${tipo}. ✨`;
+            }
+            window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
+        }
+
+        alert("Venta registrada");
+        document.getElementById('nombre-cliente').value = "";
+        document.getElementById('tel-cliente').value = "";
+        btn.disabled = false;
+        btn.innerText = "REGISTRAR VENTA";
+        cargarDesdeDrive();
+    } catch (e) { alert("Error"); btn.disabled = false; }
+}
+
+function renderInventario() {
+    const lista = document.getElementById('lista-inventario');
+    if (!lista) return;
+    lista.innerHTML = inventario.map(p => {
+        const disp = (p.stock || 0) - (p.vendidos || 0);
+        return `<li>
+            <div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${p.vendidos || 0}</small></div>
+            <div style="text-align:right">
+                <span class="stock-badge ${disp <= 0 ? 'bg-empty' : 'bg-ok'}">${disp <= 0 ? 'AGOTADO' : 'Cant: ' + disp}</span><br>
+                <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
+            </div>
+        </li>`;
+    }).join('');
+}
+
+function calcularTotales() {
+    let t = 0;
+    inventario.forEach(p => t += (parseFloat(p.vendidos)||0) * (parseFloat(p.precio)||0));
+    document.getElementById('gran-total-dinero').innerText = `$${t.toLocaleString()}`;
+}
+
+function filtrarProductos() {
+    const txt = document.getElementById('busqueda').value.toLowerCase();
+    document.querySelectorAll('#lista-inventario li').forEach(li => {
+        li.style.display = li.textContent.toLowerCase().includes(txt) ? 'flex' : 'none';
+    });
+}
+
+function actualizarSelect() {
+    const s = document.getElementById('select-producto');
+    s.innerHTML = inventario.map(p => {
+        const disp = p.stock - p.vendidos;
+        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
+    }).join('');
 }
 
 function switchTab(t) {
@@ -108,17 +116,24 @@ function switchTab(t) {
     if(t === 'stats') generarGraficos();
 }
 
-function renderInventario() {
-    const lista = document.getElementById('lista-inventario');
-    lista.innerHTML = inventario.map(p => {
-        const disp = p.stock - p.vendidos;
-        return `<li><strong>${p.nombre}</strong> <span>Cant: ${disp}</span></li>`;
-    }).join('');
-}
+function generarGraficos() {
+    if (charts.m) charts.m.destroy();
+    if (charts.p) charts.p.destroy();
+    
+    const met = historial.reduce((a, c) => (a[c.metodo] = (a[c.metodo] || 0) + 1, a), {});
+    charts.m = new Chart(document.getElementById('chartMetodos'), {
+        type: 'pie',
+        data: { labels: Object.keys(met), datasets: [{ data: Object.values(met), backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56'] }] },
+        options: { plugins: { title: { display: true, text: 'Métodos más usados' } } }
+    });
 
-function actualizarSelect() {
-    const s = document.getElementById('select-producto');
-    s.innerHTML = inventario.map(p => `<option value="${p.filaOriginal}">${p.nombre}</option>`).join('');
+    const pro = historial.reduce((a, c) => (a[c.producto] = (a[c.producto] || 0) + c.cantidad, a), {});
+    const top = Object.entries(pro).sort((a,b) => b[1]-a[1]).slice(0, 5);
+    charts.p = new Chart(document.getElementById('chartProductos'), {
+        type: 'bar',
+        data: { labels: top.map(x => x[0]), datasets: [{ label: 'Unidades', data: top.map(x => x[1]), backgroundColor: '#d63384' }] },
+        options: { indexAxis: 'y', plugins: { title: { display: true, text: 'Top 5 Productos' } } }
+    });
 }
 
 window.onload = cargarDesdeDrive;
