@@ -1,140 +1,124 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbws_mR6bAfwDnXdCOGtbqDVCc7pXo41d7zk9euRrTBL0JfaUuUGMLuHB-ghJXrszRN-_w/exec"; 
-const CODIGO_PAIS = "57"; // Cambia esto si usas otro país
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6hShZ8dPGQpHvtechXGkQ_zlqng2y1SjCCnePK7ks3Xg64KuK6Ac0LWvd9JZDnOeTvw/exec";
+const CODIGO_PAIS = "57";
 let inventario = [];
+let historial = [];
+let charts = {};
 
 async function cargarDesdeDrive() {
-    const syncBtn = document.getElementById('sync-btn');
-    if (syncBtn) syncBtn.innerText = "⏳";
     try {
         const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
-        if (data) {
-            inventario = data;
-            localStorage.setItem('inventario', JSON.stringify(inventario));
-            calcularTotales();
-            renderInventario();
-        }
-        if (syncBtn) syncBtn.innerText = "🔄";
-    } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
+        inventario = data.inventario;
+        historial = data.historial;
+        renderInventario();
+        actualizarSelect();
+        if(document.getElementById('sec-stats').style.display === 'block') generarGraficos();
+    } catch (e) { console.error("Error cargando datos"); }
 }
 
+function generarGraficos() {
+    // 1. Destruir gráficos anteriores para recargar
+    if (charts.metodos) charts.metodos.destroy();
+    if (charts.prods) charts.prods.destroy();
+
+    // 2. Procesar Datos de Métodos
+    const metodosData = historial.reduce((acc, curr) => {
+        acc[curr.metodo] = (acc[curr.metodo] || 0) + 1;
+        return acc;
+    }, {});
+
+    charts.metodos = new Chart(document.getElementById('chartMetodos'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(metodosData),
+            datasets: [{
+                label: 'Ventas por Método',
+                data: Object.values(metodosData),
+                backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56']
+            }]
+        },
+        options: { plugins: { title: { display: true, text: 'Preferencia de Pago' } } }
+    });
+
+    // 3. Procesar Productos más vendidos
+    const prodsData = historial.reduce((acc, curr) => {
+        acc[curr.producto] = (acc[curr.producto] || 0) + curr.cantidad;
+        return acc;
+    }, {});
+
+    const sortedProds = Object.entries(prodsData).sort((a,b) => b[1]-a[1]).slice(0, 5);
+
+    charts.prods = new Chart(document.getElementById('chartProductos'), {
+        type: 'bar',
+        data: {
+            labels: sortedProds.map(p => p[0]),
+            datasets: [{
+                label: 'Unidades Vendidas',
+                data: sortedProds.map(p => p[1]),
+                backgroundColor: '#d63384'
+            }]
+        },
+        options: { 
+            indexAxis: 'y',
+            plugins: { title: { display: true, text: 'Top 5 Productos' } } 
+        }
+    });
+}
+
+// FUNCIONES DE VENTA Y NAVEGACIÓN
 async function registrarVenta() {
-    const productoSelect = document.getElementById('select-producto');
-    const fila = productoSelect.value;
-    const nombreProd = productoSelect.options[productoSelect.selectedIndex].text;
-    const cantidadVenta = parseInt(document.getElementById('cant-venta').value);
+    const fila = document.getElementById('select-producto').value;
+    const nombreProd = document.getElementById('select-producto').options[document.getElementById('select-producto').selectedIndex].text;
+    const cantidad = parseInt(document.getElementById('cant-venta').value);
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
-    let telInput = document.getElementById('tel-cliente').value.replace(/\s+/g, ''); // Quitar espacios
+    let tel = document.getElementById('tel-cliente').value.replace(/\s+/g, '');
+    
+    if(!fila) return alert("Seleccione producto");
+    
+    const prod = inventario.find(p => p.filaOriginal == fila);
+    if((prod.stock - prod.vendidos) < cantidad) return alert("Sin stock suficiente");
+
+    const telFinal = tel ? (tel.startsWith(CODIGO_PAIS) ? tel : CODIGO_PAIS + tel) : "N/A";
+
     const btn = document.querySelector('.btn-save');
+    btn.disabled = true;
+    
+    await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ action: "venta", fila: parseInt(fila), productoNombre: nombreProd, cantidad, metodo, cliente, telefono: telFinal })
+    });
 
-    if (!fila) return alert("Selecciona un producto");
-
-    // Validar Stock
-    const productoData = inventario.find(p => p.filaOriginal == fila);
-    const stockDisponible = (parseFloat(productoData.stock) || 0) - (parseFloat(productoData.vendidos) || 0);
-
-    if (stockDisponible < cantidadVenta) {
-        return alert(`Stock insuficiente. Solo quedan ${stockDisponible} unidades.`);
+    alert("Venta Registrada");
+    if(telFinal !== "N/A") {
+        const msg = metodo === "Fiado" ? `Recordatorio de pago para ${cliente}` : `Gracias por tu compra ${cliente}`;
+        window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
     }
-
-    // FORMATEAR TELÉFONO AUTOMÁTICAMENTE
-    let telefonoFinal = "N/A";
-    if (telInput) {
-        // Si el usuario no puso el código de país, se lo ponemos nosotros
-        telefonoFinal = telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput;
-    }
-
-    try {
-        btn.innerText = "PROCESANDO...";
-        btn.disabled = true;
-
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify({ 
-                action: "venta", 
-                fila: parseInt(fila), 
-                productoNombre: nombreProd,
-                cantidad: cantidadVenta,
-                metodo: metodo,
-                cliente: cliente,
-                telefono: telefonoFinal
-            })
-        });
-
-        alert("¡Venta registrada!");
-
-        // Envío de WhatsApp
-        if (telefonoFinal !== "N/A") {
-            let mensaje = "";
-            if (metodo === "Efectivo" || metodo === "Transferencia") {
-                mensaje = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`;
-            } else {
-                const estado = (metodo === "Fiado") ? "pendiente de pago" : "como separado";
-                mensaje = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} en Amare Beauty ${estado}. ✨`;
-            }
-            window.open(`https://wa.me/${telefonoFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
-        }
-
-        document.getElementById('nombre-cliente').value = "";
-        document.getElementById('tel-cliente').value = "";
-        btn.innerText = "REGISTRAR VENTA";
-        btn.disabled = false;
-        cargarDesdeDrive();
-
-    } catch (e) {
-        alert("Error al conectar");
-        btn.disabled = false;
-    }
+    
+    btn.disabled = false;
+    cargarDesdeDrive();
 }
 
-function calcularTotales() {
-    let t = 0;
-    inventario.forEach(p => t += (parseFloat(p.vendidos)||0) * (parseFloat(p.precio)||0));
-    const banner = document.getElementById('gran-total-dinero');
-    if(banner) banner.innerText = `$${t.toLocaleString()}`;
+function switchTab(t) {
+    document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.getElementById('sec-' + t).style.display = 'block';
+    document.getElementById('tab-' + t).classList.add('active');
+    if(t === 'stats') generarGraficos();
 }
 
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
-    if (!lista) return;
-    lista.innerHTML = '';
-    inventario.forEach(p => {
-        const li = document.createElement('li');
-        const disp = (parseFloat(p.stock)||0) - (parseFloat(p.vendidos)||0);
-        li.innerHTML = `<div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${p.vendidos||0}</small></div>
-            <div style="text-align:right"><span class="stock-badge ${disp<=0?'bg-empty':'bg-ok'}">${disp<=0?'SIN STOCK':'Cant: '+disp}</span><br>
-            <strong>$${parseFloat(p.precio||0).toLocaleString()}</strong></div>`;
-        lista.appendChild(li);
-    });
-}
-
-function switchTab(t) {
-    document.getElementById('sec-inventario').style.display = t==='inventario'?'block':'none';
-    document.getElementById('sec-ventas').style.display = t==='ventas'?'block':'none';
-    document.getElementById('tab-inv').className = t==='inventario'?'active':'';
-    document.getElementById('tab-ven').className = t==='ventas'?'active':'';
-    if(t==='ventas') actualizarSelect();
+    lista.innerHTML = inventario.map(p => {
+        const disp = p.stock - p.vendidos;
+        return `<li><strong>${p.nombre}</strong> <span>Cant: ${disp}</span></li>`;
+    }).join('');
 }
 
 function actualizarSelect() {
     const s = document.getElementById('select-producto');
-    s.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock)||0) - (parseFloat(p.vendidos)||0);
-        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
-    }).join('');
+    s.innerHTML = inventario.map(p => `<option value="${p.filaOriginal}">${p.nombre}</option>`).join('');
 }
 
-function filtrarProductos() {
-    const txt = document.getElementById('busqueda').value.toLowerCase();
-    document.querySelectorAll('#lista-inventario li').forEach(i => i.style.display = i.textContent.toLowerCase().includes(txt)?'flex':'none');
-}
-
-window.onload = () => {
-    if(localStorage.getItem('inventario')) {
-        inventario = JSON.parse(localStorage.getItem('inventario'));
-        renderInventario(); calcularTotales();
-    }
-    cargarDesdeDrive();
-};
+window.onload = cargarDesdeDrive;
