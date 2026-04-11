@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6XzyLnsSooDcxYvO1bVGM2BmLPUtwnik21fqompxez1wIYWIE7r57mFWErEySKRon/exeC"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdv8493bb4YEa0xGqt3Do-m2igzE5HKwUNFhNndp_glFQh3104_5Qz-0rDoAlcalz38A/exec"; 
 let inventario = [];
 
 async function cargarDesdeDrive() {
@@ -53,14 +53,14 @@ async function registrarVenta() {
             })
         });
 
-        alert("Registro guardado en Historial");
+        alert("¡Venta registrada!");
 
         if (metodo === "Fiado" || metodo === "Separado") {
-            const mensaje = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} como ${metodo}. ✨`;
-            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
+            const msg = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} como ${metodo}. ✨`;
+            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        // Limpieza
+        // Limpieza y Recarga
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
         btn.innerText = "REGISTRAR VENTA";
@@ -68,7 +68,7 @@ async function registrarVenta() {
         cargarDesdeDrive();
 
     } catch (e) {
-        alert("Error");
+        alert("Error de red");
         btn.disabled = false;
     }
 }
@@ -76,7 +76,8 @@ async function registrarVenta() {
 function calcularTotales() {
     let t = 0;
     inventario.forEach(p => t += (parseFloat(p.vendidos)||0) * (parseFloat(p.precio)||0));
-    document.getElementById('gran-total-dinero').innerText = `$${t.toLocaleString()}`;
+    const banner = document.getElementById('gran-total-dinero');
+    if(banner) banner.innerText = `$${t.toLocaleString()}`;
 }
 
 function renderInventario() {
