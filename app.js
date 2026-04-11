@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVEFP4ooCCBsSuO-fVmG8S7VZ7hb88s8_9mSKFwsS_bDNQVLsqDBeclN70Mwp71CuxEg/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxK-LXWHx8C_bYc8G4U_-ggPOCyB-7Cg_xktF-VX_oFr1rD820BTJfjvdVpVKeQir-PNQ/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -14,11 +14,17 @@ async function cargarDesdeDrive() {
         historial = data.historial;
         
         renderInventario();
-        mostrarTotalReal(); // Nueva función para leer Columna L
+        calcularTotales();
         actualizarSelect();
         
         if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
+}
+
+function calcularTotales() {
+    // CORRECCIÓN: Suma el valor de la columna L (Venta Total) de cada fila del Drive
+    let totalAcumulado = inventario.reduce((acc, p) => acc + (parseFloat(p.totalFila) || 0), 0);
+    document.getElementById('gran-total-dinero').innerText = `$${totalAcumulado.toLocaleString()}`;
 }
 
 async function registrarVenta() {
@@ -36,9 +42,7 @@ async function registrarVenta() {
     if (disp < cantidad) return alert("¡Stock insuficiente!");
 
     let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
-
     btn.disabled = true;
-    btn.innerText = "PROCESANDO...";
 
     try {
         await fetch(SCRIPT_URL, {
@@ -51,34 +55,22 @@ async function registrarVenta() {
         });
 
         if (telFinal !== "N/A") {
-            let mensaje = "";
-            if (metodo === "Efectivo" || metodo === "Transferencia") {
-                mensaje = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`;
-            } else {
-                const tipo = (metodo === "Fiado") ? "pendiente de pago" : "como separado";
-                mensaje = `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} en Amare Beauty ${tipo}. ✨`;
-            }
+            let mensaje = (metodo === "Efectivo" || metodo === "Transferencia") 
+                ? `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`
+                : `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} en Amare Beauty ${(metodo === "Fiado") ? "pendiente de pago" : "como separado"}. ✨`;
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
-        alert("¡Venta registrada!");
+        alert("Venta registrada");
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
         btn.disabled = false;
-        btn.innerText = "REGISTRAR VENTA";
         cargarDesdeDrive();
-    } catch (e) { alert("Error de conexión"); btn.disabled = false; }
-}
-
-function mostrarTotalReal() {
-    // Sumamos los valores que vienen directamente de la Columna L del Drive
-    let sumaTotal = inventario.reduce((acc, p) => acc + (parseFloat(p.totalFila) || 0), 0);
-    document.getElementById('gran-total-dinero').innerText = `$${sumaTotal.toLocaleString()}`;
+    } catch (e) { alert("Error"); btn.disabled = false; }
 }
 
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
-    if (!lista) return;
     lista.innerHTML = inventario.map(p => {
         const disp = (p.stock || 0) - (p.vendidos || 0);
         return `<li>
@@ -117,14 +109,12 @@ function switchTab(t) {
 function generarGraficos() {
     if (charts.m) charts.m.destroy();
     if (charts.p) charts.p.destroy();
-    
     const met = historial.reduce((a, c) => (a[c.metodo] = (a[c.metodo] || 0) + 1, a), {});
     charts.m = new Chart(document.getElementById('chartMetodos'), {
         type: 'pie',
         data: { labels: Object.keys(met), datasets: [{ data: Object.values(met), backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56'] }] },
         options: { plugins: { title: { display: true, text: 'Métodos de Pago' } } }
     });
-
     const pro = historial.reduce((a, c) => (a[c.producto] = (a[c.producto] || 0) + c.cantidad, a), {});
     const top = Object.entries(pro).sort((a,b) => b[1]-a[1]).slice(0, 5);
     charts.p = new Chart(document.getElementById('chartProductos'), {
