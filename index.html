@@ -3,59 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amare Beauty - Gestión</title>
+    <title>Amare Beauty - Pro</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-container">
         <header>
             <h1>Amare Beauty</h1>
-            <div class="total-ventas-banner">
-                <small>VENTA TOTAL ACUMULADA</small>
-                <h2 id="gran-total-dinero">$0</h2>
-            </div>
             <nav class="tabs">
                 <button onclick="switchTab('inventario')" id="tab-inv" class="active">Inventario</button>
                 <button onclick="switchTab('ventas')" id="tab-ven">Ventas</button>
+                <button onclick="switchTab('stats')" id="tab-stats">Estadísticas</button>
             </nav>
         </header>
 
         <main>
             <section id="sec-inventario" class="tab-content">
                 <div class="search-bar">
-                    <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()">
-                    <button onclick="cargarDesdeDrive()" id="sync-btn">🔄</button>
+                    <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrarProductos()">
+                    <button onclick="cargarDesdeDrive()">🔄</button>
                 </div>
                 <ul id="lista-inventario"></ul>
             </section>
 
             <section id="sec-ventas" class="tab-content" style="display:none;">
                 <div class="venta-form">
-                    <label>Producto:</label>
-                    <select id="select-producto"></select>
-                    
-                    <label>Cantidad:</label>
-                    <input type="number" id="cant-venta" value="1" min="1">
-
-                    <label>Método de Pago:</label>
+                    <label>Producto:</label><select id="select-producto"></select>
+                    <label>Cantidad:</label><input type="number" id="cant-venta" value="1" min="1">
+                    <label>Pago:</label>
                     <select id="metodo-pago">
-                        <option value="Efectivo">💵 Efectivo</option>
-                        <option value="Transferencia">📱 Transferencia</option>
-                        <option value="Separado">📦 Separado</option>
-                        <option value="Fiado">📝 Fiado</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Separado">Separado</option>
+                        <option value="Fiado">Fiado</option>
                     </select>
-
-                    <div id="campos-cliente" style="margin-top:10px; border-left: 3px solid #d63384; padding-left: 10px;">
-                        <label>Nombre del Cliente:</label>
-                        <input type="text" id="nombre-cliente" placeholder="Ej: Maria Lopez">
-                        <label>WhatsApp (10 dígitos):</label>
-                        <input type="tel" id="tel-cliente" placeholder="3001234567">
+                    <div id="campos-cliente">
+                        <label>Nombre:</label><input type="text" id="nombre-cliente">
+                        <label>WhatsApp:</label><input type="tel" id="tel-cliente">
                     </div>
-                    
-                    <button onclick="registrarVenta()" class="btn-save" style="margin-top:15px;">REGISTRAR VENTA</button>
+                    <button onclick="registrarVenta()" class="btn-save">REGISTRAR VENTA</button>
                 </div>
-                <hr>
-                <div id="resumen-cantidades" style="padding: 0 20px; font-size: 14px; color: #666;"></div>
+            </section>
+
+            <section id="sec-stats" class="tab-content" style="display:none; padding: 20px;">
+                <h2 style="text-align: center; color: #d63384;">Dashboard de Negocio</h2>
+                <div class="chart-container" style="margin-bottom: 30px;">
+                    <canvas id="chartMetodos"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartProductos"></canvas>
+                </div>
             </section>
         </main>
     </div>
