@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amare Beauty - Gestión</title>
-    <link rel="icon" href="data:,"> <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -12,7 +13,7 @@
         <header>
             <h1>Amare Beauty</h1>
             <div class="total-ventas-banner">
-                <small>VENTA TOTAL ACUMULADA (Precio E × Cant K)</small>
+                <small>VENTA REAL (Precio E × Cant K)</small>
                 <h2 id="gran-total-dinero">$0</h2>
             </div>
             <nav class="tabs">
@@ -35,7 +36,7 @@
                 <div class="venta-form">
                     <label>Producto:</label><select id="select-producto"></select>
                     <label>Cantidad:</label><input type="number" id="cant-venta" value="1" min="1">
-                    <label>Método:</label>
+                    <label>Método de Pago:</label>
                     <select id="metodo-pago">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Transferencia">📱 Transferencia</option>
