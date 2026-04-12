@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwr8F9rr8ZyxTcb2OoqSdxRM4Qn5Jn8mgMdSX-6L-BOUJlXxtLuXqpmy8oIXulgLkYrjg/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-Oejr0Y3xXbcsdkbbJJp39zB-peV-75EPmseY8k0B8_TC-rIBDlMf2QHcbHkRv3yzBw/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -32,43 +32,47 @@ function calcularVentasTotales() {
 function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    
     const sec = document.getElementById('sec-' + t);
     const btn = document.getElementById('tab-' + t);
+    
     if (sec && btn) {
         sec.style.display = 'block';
         btn.classList.add('active');
     }
-    if(t === 'stats') setTimeout(generarGraficosDinamicos, 150);
+
+    // El secreto: Esperar a que el DOM se actualice antes de dibujar los gráficos
+    if(t === 'stats') {
+        setTimeout(dibujarGraficosFinal, 200);
+    }
 }
 
-function generarGraficosDinamicos() {
-    const pinkAmare = '#d63384';
-    const purpleAmare = '#6610f2';
-
-    // 1. Gráfico de Métodos
-    const ctxM = document.getElementById('chartMetodos');
+function dibujarGraficosFinal() {
+    const colorPrimario = '#d63384';
+    
+    // 1. Gráfico Métodos (Dona)
+    const ctxM = document.getElementById('canvasMetodos');
     if (ctxM) {
         if (charts.m) charts.m.destroy();
         const metData = historial.reduce((a, c) => (a[c.metodo] = (a[c.metodo] || 0) + 1, a), {});
+        
         charts.m = new Chart(ctxM, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(metData),
                 datasets: [{
                     data: Object.values(metData),
-                    backgroundColor: [pinkAmare, purpleAmare, '#fd7e14', '#20c997', '#0dcaf0'],
-                    hoverOffset: 10
+                    backgroundColor: [colorPrimario, '#6610f2', '#fd7e14', '#20c997', '#0dcaf0']
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
         });
     }
 
-    // 2. Gráfico TOP 5 MEJORADO (Horizontal)
-    const ctxP = document.getElementById('chartProductos');
+    // 2. Gráfico Top 5 (Horizontal)
+    const ctxP = document.getElementById('canvasTop5');
     if (ctxP) {
         if (charts.p) charts.p.destroy();
-        
         const top5 = [...inventario]
             .sort((a, b) => (parseFloat(b.vendidos) || 0) - (parseFloat(a.vendidos) || 0))
             .slice(0, 5);
@@ -76,27 +80,20 @@ function generarGraficosDinamicos() {
         charts.p = new Chart(ctxP, {
             type: 'bar',
             data: {
-                labels: top5.map(p => p.nombre.length > 20 ? p.nombre.substring(0, 20) + '...' : p.nombre),
+                labels: top5.map(p => p.nombre.substring(0, 15) + '..'),
                 datasets: [{
-                    label: 'Unidades',
+                    label: 'Ventas',
                     data: top5.map(p => parseFloat(p.vendidos) || 0),
-                    backgroundColor: pinkAmare,
-                    borderRadius: 5,
-                    barThickness: 25
+                    backgroundColor: colorPrimario,
+                    borderRadius: 5
                 }]
             },
             options: {
-                indexAxis: 'y', // Lo hace horizontal para que se lea mejor
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    x: { beginAtZero: true, grid: { display: false } },
-                    y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { backgroundColor: purpleAmare }
-                }
+                scales: { x: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
             }
         });
     }
@@ -145,15 +142,11 @@ async function registrarVenta() {
         });
 
         if (telFinal !== "N/A") {
-            let mensaje = (metodo === "Efectivo" || metodo === "Transferencia") 
-                ? `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`
-                : `Hola ${cliente}, confirmamos tu pedido de ${nombreProd} en Amare Beauty ${(metodo === "Fiado") ? "pendiente de pago" : "como separado"}. ✨`;
+            let mensaje = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra en Amare Beauty. ❤️`;
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
         alert("Venta registrada");
-        document.getElementById('nombre-cliente').value = "";
-        document.getElementById('tel-cliente').value = "";
         btn.disabled = false;
         cargarDesdeDrive();
     } catch (e) { alert("Error"); btn.disabled = false; }
