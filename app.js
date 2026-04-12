@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzT__TKGljuV6Gq99ASfxT_U-uOytz5FF13JVYAsX07kLVScfWjixffRFWQOjaQL2NC9Q/exec"; // CORRIGE EL THTTPS AQUÍ
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY69zIRrHcSzAEhHMc-hSo9efRGGt88nj-cG5b_eIeUg9g25SmdWKUrozyl4lACg11/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -20,17 +20,19 @@ async function cargarDesdeDrive() {
         
         if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) { 
-        console.error("Error cargando datos:", e);
+        console.error(e);
         if (syncBtn) syncBtn.innerText = "❌"; 
     }
 }
 
 function calcularVentasTotales() {
-    // Cálculo: Suma de (Precio E * Cantidad Vendida K)
+    // Cálculo: Precio (E) * Cantidad Vendida (K)
     let sumaReal = 0;
     inventario.forEach(p => {
         const precio = parseFloat(p.precio) || 0;
         const unidadesVendidas = parseFloat(p.vendidos) || 0;
+        
+        // Sumamos solo si el precio y la venta son válidos
         if (precio > 0 && unidadesVendidas > 0) {
             sumaReal += (precio * unidadesVendidas);
         }
@@ -61,7 +63,7 @@ function switchTab(t) {
     const btn = document.getElementById('tab-' + t);
     
     if (sec) sec.style.display = 'block';
-    if (btn) btn.classList.add('active'); // Solución al error classList
+    if (btn) btn.classList.add('active'); 
     
     if(t === 'stats') generarGraficos();
 }
@@ -78,7 +80,6 @@ async function registrarVenta() {
 
     const p = inventario.find(item => item.filaOriginal == fila);
     const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-    
     if (disp < cantidad) return alert("¡Stock insuficiente!");
 
     let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
