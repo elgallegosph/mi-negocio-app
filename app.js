@@ -92,7 +92,6 @@ function filtrarSelectVentas() {
     const txt = document.getElementById('busqueda-venta').value.toLowerCase();
     const select = document.getElementById('select-producto');
     select.innerHTML = "";
-    
     inventario.forEach(p => {
         if (p.nombre.toLowerCase().includes(txt)) {
             const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
@@ -134,7 +133,14 @@ async function registrarVenta() {
         });
 
         if (telFinal !== "N/A") {
-            let msg = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`;
+            let msg = "";
+            if (metodo === "Efectivo" || metodo === "Transferencia") {
+                msg = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️ ¡Que lo disfrutes!`;
+            } else if (metodo === "Separado") {
+                msg = `¡Hola ${cliente}! ✨ Tu producto ${nombreProd} ha sido separado con éxito en Amare Beauty. 📦 ¡Pronto será tuyo!`;
+            } else if (metodo === "Fiado") {
+                msg = `¡Hola ${cliente}! ✨ Te informamos que tu pedido de ${nombreProd} ha sido entregado y queda pendiente por pagar en Amare Beauty. 📝`;
+            }
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
