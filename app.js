@@ -1,16 +1,16 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6_7DQLfpxqg2JIe-EPulXmx5-Zw6PLFEhLQR-mA7Rwcr-lFoN71AdJdgZtAPsSUodXQ/exec"; 
 const CODIGO_PAIS = "57";
-const LOGO_LOCAL = "./logo.png"; // Ruta del archivo que subiste a GitHub
+// Ruta de la imagen que ya subiste a tu carpeta en GitHub
+const LOGO_LOCAL = "./logo.png"; 
 
 let inventario = [];
 let historial = [];
 let charts = {};
 
-// Función optimizada para cargar la imagen local sin bloqueos
+// Función para obtener la imagen local como base64 para jsPDF
 async function getBase64Image(url) {
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error("No se pudo cargar el logo local");
         const blob = await response.blob();
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -18,7 +18,7 @@ async function getBase64Image(url) {
             reader.readAsDataURL(blob);
         });
     } catch (e) {
-        console.error("Error cargando logo local:", e);
+        console.error("Error cargando el logo desde GitHub:", e);
         return null;
     }
 }
@@ -78,7 +78,7 @@ function validarStockSeleccionado() {
     const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
     if (disponible <= 0 || cantidad > disponible) {
         btn.disabled = true; btn.classList.add('btn-disabled');
-        btn.innerText = "STOCK NO DISPONIBLE";
+        btn.innerText = "STOCK AGOTADO";
     } else {
         btn.disabled = false; btn.classList.remove('btn-disabled');
         btn.innerText = "REGISTRAR VENTA Y PDF";
@@ -90,15 +90,16 @@ async function generarPDF(datos) {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
     
+    // Carga segura del logo local
     const imgData = await getBase64Image(LOGO_LOCAL);
 
     if (imgData) {
-        // Marca de agua
-        doc.setGState(new doc.GState({ opacity: 0.07 }));
-        doc.addImage(imgData, 'PNG', 45, 85, 120, 120);
+        // Marca de agua estética
+        doc.setGState(new doc.GState({ opacity: 0.08 }));
+        doc.addImage(imgData, 'PNG', 45, 80, 120, 120);
         doc.setGState(new doc.GState({ opacity: 1.0 }));
-        // Logo cabecera
-        doc.addImage(imgData, 'PNG', 15, 12, 35, 35);
+        // Logo superior izquierdo
+        doc.addImage(imgData, 'PNG', 15, 10, 35, 35);
     }
 
     doc.setFont("helvetica", "bold");
@@ -108,24 +109,24 @@ async function generarPDF(datos) {
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Comprobante: #" + Date.now().toString().slice(-6), 195, 32, { align: "right" });
+    doc.text("Factura No: " + Date.now().toString().slice(-6), 195, 32, { align: "right" });
     
     doc.setDrawColor(214, 51, 132);
-    doc.line(15, 50, 195, 50);
+    doc.line(15, 48, 195, 48);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0);
     doc.setFontSize(11);
-    doc.text(`Fecha: ${fecha}`, 15, 60);
-    doc.text(`Cliente: ${datos.cliente}`, 15, 67);
-    doc.text(`Pago: ${datos.metodo}`, 15, 74);
+    doc.text(`Fecha: ${fecha}`, 15, 58);
+    doc.text(`Cliente: ${datos.cliente}`, 15, 65);
+    doc.text(`Pago: ${datos.metodo}`, 15, 72);
 
     doc.setFillColor(245, 245, 245);
     doc.rect(15, 85, 180, 10, 'F');
     doc.setFont("helvetica", "bold");
     doc.text("Producto", 20, 92);
-    doc.text("Cantidad", 130, 92);
-    doc.text("Subtotal", 175, 92);
+    doc.text("Cant.", 130, 92);
+    doc.text("Total", 175, 92);
 
     doc.setFont("helvetica", "normal");
     doc.text(datos.producto, 20, 105);
@@ -135,14 +136,14 @@ async function generarPDF(datos) {
     doc.line(15, 115, 195, 115);
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("TOTAL:", 130, 130);
+    doc.text("TOTAL PAGADO:", 110, 130);
     doc.text(`$${datos.total.toLocaleString('es-CO')}`, 195, 130, { align: "right" });
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "italic");
-    doc.text("Gracias por tu compra.", 105, 160, { align: "center" });
+    doc.text("¡Gracias por tu compra en Amare!", 105, 160, { align: "center" });
 
-    doc.save(`Factura_Amare_${datos.cliente}.pdf`);
+    doc.save(`Factura_${datos.cliente}.pdf`);
 }
 
 async function registrarVenta() {
@@ -169,6 +170,7 @@ async function registrarVenta() {
             })
         });
 
+        // Generar PDF usando el logo de GitHub
         await generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
 
         if (telFinal !== "N/A") {
@@ -176,7 +178,7 @@ async function registrarVenta() {
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        alert("¡Venta Exitosa!");
+        alert("Venta registrada y factura generada.");
         document.getElementById('busqueda-venta').value = "";
         btn.disabled = false;
         cargarDesdeDrive();
