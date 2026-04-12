@@ -1,5 +1,8 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6_7DQLfpxqg2JIe-EPulXmx5-Zw6PLFEhLQR-mA7Rwcr-lFoN71AdJdgZtAPsSUodXQ/exec"; 
 const CODIGO_PAIS = "57";
+// Enlace directo a la imagen del logo (usando el ID de tu drive para visualización directa)
+const LOGO_URL = "https://lh3.googleusercontent.com/u/0/d/1Xl200lK2Ww5Z66pLpxZ8YF4H7Vq_mBvY"; 
+
 let inventario = [];
 let historial = [];
 let charts = {};
@@ -16,10 +19,7 @@ async function cargarDesdeDrive() {
         calcularVentasTotales(); 
         actualizarSelect();
         if (syncBtn) syncBtn.innerText = "🔄";
-    } catch (e) {
-        console.error(e);
-        if (syncBtn) syncBtn.innerText = "❌";
-    }
+    } catch (e) { console.error(e); if (syncBtn) syncBtn.innerText = "❌"; }
 }
 
 function renderInventario() {
@@ -65,57 +65,76 @@ function validarStockSeleccionado() {
         btn.innerText = disponible <= 0 ? "SIN STOCK" : "REBASA STOCK";
     } else {
         btn.disabled = false; btn.classList.remove('btn-disabled');
-        btn.innerText = "REGISTRAR VENTA Y PDF";
+        btn.innerText = "REGISTRAR VENTA Y FACTURA";
     }
 }
 
-function generarPDF(datos) {
+async function generarPDF(datos) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
 
-    // Diseño de Factura
+    // 1. Marca de Agua (Imagen en el centro con transparencia)
+    try {
+        doc.setGState(new doc.GState({ opacity: 0.1 })); // Transparencia baja
+        doc.addImage(LOGO_URL, 'PNG', 40, 80, 130, 130);
+        doc.setGState(new doc.GState({ opacity: 1.0 })); // Restaurar opacidad
+    } catch(e) { console.log("Error cargando marca de agua"); }
+
+    // 2. Logo en la parte superior izquierda
+    try {
+        doc.addImage(LOGO_URL, 'PNG', 20, 10, 30, 30);
+    } catch(e) { console.log("Error cargando logo superior"); }
+
+    // Cabecera Texto
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
-    doc.setTextColor(214, 51, 132); // Color Rosa Amare
-    doc.text("AMARE BEAUTY", 105, 20, { align: "center" });
+    doc.setTextColor(214, 51, 132); // Rosa Amare
+    doc.text("AMARE BEAUTY", 190, 25, { align: "right" });
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Comprobante de Venta", 105, 28, { align: "center" });
+    doc.text("Factura de Venta No. " + Date.now().toString().slice(-6), 190, 32, { align: "right" });
     
     doc.setDrawColor(214, 51, 132);
-    doc.line(20, 35, 190, 35);
+    doc.line(20, 45, 190, 45);
 
+    // Datos del Cliente
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0);
-    doc.text(`Fecha: ${fecha}`, 20, 45);
-    doc.text(`Cliente: ${datos.cliente}`, 20, 52);
-    doc.text(`Método: ${datos.metodo}`, 20, 59);
+    doc.setFontSize(11);
+    doc.text(`Fecha: ${fecha}`, 20, 55);
+    doc.text(`Cliente: ${datos.cliente}`, 20, 62);
+    doc.text(`Método de Pago: ${datos.metodo}`, 20, 69);
 
-    // Tabla de producto
+    // Tabla de Productos
     doc.setFillColor(245, 245, 245);
-    doc.rect(20, 70, 170, 10, 'F');
+    doc.rect(20, 80, 170, 10, 'F');
     doc.setFont("helvetica", "bold");
-    doc.text("Producto", 25, 77);
-    doc.text("Cant.", 120, 77);
-    doc.text("Subtotal", 160, 77);
+    doc.text("Descripción", 25, 87);
+    doc.text("Cant.", 120, 87);
+    doc.text("Precio Unit.", 145, 87);
+    doc.text("Total", 175, 87);
 
     doc.setFont("helvetica", "normal");
-    doc.text(datos.producto, 25, 90);
-    doc.text(datos.cantidad.toString(), 125, 90);
-    doc.text(`$${datos.total.toLocaleString('es-CO')}`, 160, 90);
+    doc.text(datos.producto, 25, 100);
+    doc.text(datos.cantidad.toString(), 125, 100);
+    doc.text(`$${datos.precioUnit.toLocaleString()}`, 145, 100);
+    doc.text(`$${datos.total.toLocaleString()}`, 175, 100);
 
-    doc.line(20, 100, 190, 100);
+    doc.line(20, 110, 190, 110);
     doc.setFontSize(14);
-    doc.text("TOTAL PAGADO:", 120, 110);
-    doc.text(`$${datos.total.toLocaleString('es-CO')}`, 165, 110);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL PAGADO:", 110, 125);
+    doc.text(`$${datos.total.toLocaleString('es-CO')}`, 190, 125, { align: "right" });
 
+    // Pie de página
     doc.setFontSize(10);
     doc.setFont("helvetica", "italic");
-    doc.text("¡Gracias por confiar en Amare Beauty!", 105, 130, { align: "center" });
+    doc.setTextColor(150);
+    doc.text("¡Gracias por resaltar tu belleza con nosotros!", 105, 150, { align: "center" });
 
-    doc.save(`Factura_Amare_${datos.cliente}_${Date.now()}.pdf`);
+    doc.save(`Amare_Factura_${datos.cliente}.pdf`);
 }
 
 async function registrarVenta() {
@@ -142,26 +161,27 @@ async function registrarVenta() {
             })
         });
 
-        // Generar Factura PDF
-        generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
+        // Generar Factura PDF con Logo
+        await generarPDF({ cliente, producto: nombreProd, cantidad, precioUnit: parseFloat(p.precio), total: totalVenta, metodo });
 
         // Enviar WhatsApp
         if (telFinal !== "N/A") {
             let msg = (metodo === "Efectivo" || metodo === "Transferencia") 
-                ? `¡Hola ${cliente}! ✨ Gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`
-                : (metodo === "Separado") 
-                ? `¡Hola ${cliente}! ✨ Tu producto ${nombreProd} ha sido separado en Amare Beauty. 📦`
-                : `¡Hola ${cliente}! ✨ Tu pedido de ${nombreProd} queda pendiente por pagar en Amare Beauty. 📝`;
+                ? `¡Hola ${cliente}! ✨ Gracias por tu compra en Amare Beauty. ❤️`
+                : (metodo === "Separado") ? `¡Hola ${cliente}! ✨ Producto separado en Amare Beauty. 📦` 
+                : `¡Hola ${cliente}! ✨ Tu pedido queda pendiente por pagar en Amare Beauty. 📝`;
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        alert("¡Venta Registrada y Factura Generada!");
+        alert("¡Venta Exitosa y Factura Generada!");
         document.getElementById('busqueda-venta').value = "";
         btn.disabled = false;
         cargarDesdeDrive();
         switchTab('inventario');
     } catch (e) { alert("Error"); btn.disabled = false; }
 }
+
+// ... Resto de funciones (switchTab, calcularVentasTotales, filtrarSelectVentas, filtrarProductos, actualizarSelect, dibujarGraficos) se mantienen igual a la versión anterior.
 
 function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
