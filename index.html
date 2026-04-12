@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amare Beauty - Gestión Dinámica</title>
+    <title>Amare Beauty - Gestión</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -12,7 +13,7 @@
         <header>
             <h1>Amare Beauty</h1>
             <div class="total-ventas-banner">
-                <small>VENTA TOTAL ACUMULADA</small>
+                <small>VENTA TOTAL ACUMULADA </small>
                 <h2 id="gran-total-dinero">$0</h2>
             </div>
             <nav class="tabs">
@@ -42,7 +43,7 @@
                         <option value="Separado">📦 Separado</option>
                         <option value="Fiado">📝 Fiado</option>
                     </select>
-                    <div id="campos-cliente" style="margin-top:10px; border-left: 3px solid #d63384; padding-left: 10px;">
+                    <div style="margin-top:10px; border-left: 3px solid #d63384; padding-left: 10px;">
                         <label>Cliente:</label><input type="text" id="nombre-cliente">
                         <label>WhatsApp:</label><input type="tel" id="tel-cliente">
                     </div>
@@ -50,9 +51,9 @@
                 </div>
             </section>
 
-            <section id="sec-stats" class="tab-content" style="display:none;">
-                <canvas id="chartMetodos"></canvas>
-                <canvas id="chartProductos"></canvas>
+            <section id="sec-stats" class="tab-content" style="display:none; padding: 15px;">
+                <canvas id="chartMetodos" style="max-height: 280px; margin-bottom: 25px;"></canvas>
+                <canvas id="chartProductos" style="max-height: 280px;"></canvas>
             </section>
         </main>
     </div>
