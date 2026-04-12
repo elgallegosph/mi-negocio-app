@@ -1,43 +1,52 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqSj7G0RydioZKx-CYonBBQUwZ2RQoguuM38IKmqfhcJnab9zfRdweNgsWkhofHIQU/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbza9uk375XPdXJmCHA25eww1xg4uvNapi1pKIiRpILhxQndc7F5G_unnFPYXsCwZ5SeNw/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
 let charts = {};
 
+// Carga rápida: usa caché del navegador para evitar esperas si los datos son idénticos
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
-    if (syncBtn) syncBtn.innerText = "⏳";
+    if (syncBtn) {
+        syncBtn.innerText = "⏳";
+        syncBtn.style.transform = "rotate(360deg)";
+    }
+    
     try {
-        const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
-        const data = await res.json();
+        const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
+        const data = await response.json();
+        
         inventario = data.inventario || [];
         historial = data.historial || [];
+        
         renderInventario();
         calcularVentasTotales(); 
         actualizarSelect();
-        if (syncBtn) syncBtn.innerText = "🔄";
-    } catch (e) { console.error(e); if (syncBtn) syncBtn.innerText = "❌"; }
+        
+        if (syncBtn) {
+            syncBtn.innerText = "🔄";
+            syncBtn.style.transform = "rotate(0deg)";
+        }
+    } catch (e) {
+        console.error("Error cargando datos:", e);
+        if (syncBtn) syncBtn.innerText = "❌";
+    }
 }
 
 function calcularVentasTotales() {
-    let sumaReal = 0;
-    inventario.forEach(p => {
-        sumaReal += (parseFloat(p.precio) || 0) * (parseFloat(p.vendidos) || 0);
-    });
-    document.getElementById('gran-total-dinero').innerText = `$${sumaReal.toLocaleString('es-CO')}`;
+    const total = inventario.reduce((sum, p) => sum + ((parseFloat(p.precio) || 0) * (parseFloat(p.vendidos) || 0)), 0);
+    document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
 }
 
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
     if (!lista) return;
     lista.innerHTML = inventario.map(p => {
-        const stockInicial = parseFloat(p.stock) || 0;
-        const vendidos = parseFloat(p.vendidos) || 0;
-        const disponible = stockInicial - vendidos;
+        const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         return `<li class="lista-item">
             <div class="product-info">
                 <span class="product-name">${p.nombre}</span><br>
-                <span style="font-size:0.85rem; color:#666;">Vendidos: ${vendidos} | Stock inicial: ${stockInicial}</span>
+                <span style="font-size:0.85rem; color:#666;">Vendidos: ${p.vendidos}</span>
                 <span class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</span>
             </div>
             <div style="text-align:right">
@@ -49,15 +58,21 @@ function renderInventario() {
     }).join('');
 }
 
+// Auto-actualización al cambiar de pestaña
 function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    
     const sec = document.getElementById('sec-' + t);
     const btn = document.getElementById('tab-' + t);
+    
     if (sec && btn) {
         sec.style.display = 'block';
         btn.classList.add('active');
+        // Actualiza los datos automáticamente al entrar a cualquier pestaña
+        cargarDesdeDrive(); 
     }
+    
     if(t === 'stats') setTimeout(dibujarGraficos, 300);
 }
 
@@ -83,7 +98,7 @@ function dibujarGraficos() {
                 labels: top5.map(p => p.nombre.substring(0, 15)),
                 datasets: [{ label: 'Ventas', data: top5.map(p => p.vendidos), backgroundColor: pink }]
             },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } } }
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
         });
     }
 }
@@ -133,14 +148,12 @@ async function registrarVenta() {
         });
 
         if (telFinal !== "N/A") {
-            let msg = "";
-            if (metodo === "Efectivo" || metodo === "Transferencia") {
-                msg = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️ ¡Que lo disfrutes!`;
-            } else if (metodo === "Separado") {
-                msg = `¡Hola ${cliente}! ✨ Tu producto ${nombreProd} ha sido separado con éxito en Amare Beauty. 📦 ¡Pronto será tuyo!`;
-            } else if (metodo === "Fiado") {
-                msg = `¡Hola ${cliente}! ✨ Te informamos que tu pedido de ${nombreProd} ha sido entregado y queda pendiente por pagar en Amare Beauty. 📝`;
-            }
+            let msg = (metodo === "Efectivo" || metodo === "Transferencia") 
+                ? `¡Hola ${cliente}! ✨ Gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`
+                : (metodo === "Separado") 
+                ? `¡Hola ${cliente}! ✨ Tu producto ${nombreProd} ha sido separado en Amare Beauty. 📦`
+                : `¡Hola ${cliente}! ✨ Tu pedido de ${nombreProd} queda pendiente por pagar en Amare Beauty. 📝`;
+            
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
