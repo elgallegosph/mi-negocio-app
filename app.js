@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvVuZzTgI0yyKgiAATc2y8cLwiDyB__Aa6-uYBNtZ6N3vrUoUyy8GKJghDgKuvmEm-mg/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4FJTWmp7ulS490aEeBzEyMEQwaKtrMhb8E8elSejL0DFbI-9GDSN-Svd_aRyXQM4GFA/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
