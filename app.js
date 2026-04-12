@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxiCSV7fpiB7VACjTAHxPzBs3stHQkkFFl0cNeRU0uEQJGhhuOAPpBVckTtdS9Q_Lv9aQ/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxyl4XNnGG-yczmTVI7S9z4PJ1EhyXlUJApLgq_eBK8TztJsMvoxo5GdcKu_KnIVJocaA/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -27,6 +27,28 @@ function calcularVentasTotales() {
     document.getElementById('gran-total-dinero').innerText = `$${sumaReal.toLocaleString('es-CO')}`;
 }
 
+function renderInventario() {
+    const lista = document.getElementById('lista-inventario');
+    if (!lista) return;
+    lista.innerHTML = inventario.map(p => {
+        const stockInicial = parseFloat(p.stock) || 0;
+        const vendidos = parseFloat(p.vendidos) || 0;
+        const disponible = stockInicial - vendidos;
+        
+        return `<li>
+            <div style="flex-grow:1">
+                <strong>${p.nombre}</strong><br>
+                <small>Vendidos: ${vendidos} | Precio: $${parseFloat(p.precio).toLocaleString()}</small>
+            </div>
+            <div style="text-align:right">
+                <span class="stock-badge ${disponible <= 0 ? 'bg-empty' : 'bg-ok'}">
+                    ${disponible <= 0 ? 'AGOTADO' : 'Disp: ' + disponible}
+                </span>
+            </div>
+        </li>`;
+    }).join('');
+}
+
 function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
@@ -41,7 +63,6 @@ function switchTab(t) {
 
 function dibujarGraficos() {
     const pink = '#d63384';
-    // Gráfico Métodos
     const ctxM = document.getElementById('canvasMetodos');
     if (ctxM) {
         if (charts.m) charts.m.destroy();
@@ -51,7 +72,6 @@ function dibujarGraficos() {
             data: { labels: Object.keys(metData), datasets: [{ data: Object.values(metData), backgroundColor: [pink, '#6610f2', '#fd7e14', '#20c997'] }] }
         });
     }
-    // Gráfico Top 5
     const ctxP = document.getElementById('canvasTop5');
     if (ctxP) {
         if (charts.p) charts.p.destroy();
@@ -95,23 +115,14 @@ async function registrarVenta() {
         });
 
         if (telFinal !== "N/A") {
-            let msg = `¡Hola ${cliente}! ✨ Gracias por elegir Amare Beauty. Tu compra de ${nombreProd} ha sido registrada. ❤️`;
+            let msg = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`;
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        alert("¡Venta Exitosa!");
+        alert("¡Venta Registrada!");
         btn.disabled = false;
         cargarDesdeDrive();
     } catch (e) { alert("Error"); btn.disabled = false; }
-}
-
-function renderInventario() {
-    const lista = document.getElementById('lista-inventario');
-    if (!lista) return;
-    lista.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<li><span>${p.nombre}</span> <strong>Cant: ${disp}</strong></li>`;
-    }).join('');
 }
 
 function filtrarProductos() {
@@ -123,7 +134,10 @@ function filtrarProductos() {
 
 function actualizarSelect() {
     const s = document.getElementById('select-producto');
-    if (s) s.innerHTML = inventario.map(p => `<option value="${p.filaOriginal}">${p.nombre}</option>`).join('');
+    if (s) s.innerHTML = inventario.map(p => {
+        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
+    }).join('');
 }
 
 window.onload = cargarDesdeDrive;
