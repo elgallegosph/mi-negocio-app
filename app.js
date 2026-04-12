@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3juZS1dOPDAExYFJYO8Mr40DSOsTjJdZ99K02fA9TgX00DyPNV6SM7aCPQNhiY0yw1w/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxtwvA06Nv_NevyfgbY7VDw1j_2lh2sgSNQqnDtpxCFnA0A3Csj0cEIfpV7zDWM5SuGlQ/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -15,20 +15,25 @@ async function cargarDesdeDrive() {
         historial = data.historial || [];
         
         renderInventario();
-        calcularTotalAutomatico(); // Realiza el cálculo real fila por fila
+        calcularVentasTotales(); // Aquí se ejecuta el cálculo E x K
         actualizarSelect();
         
         if (syncBtn) syncBtn.innerText = "🔄";
-    } catch (e) { if (syncBtn) syncBtn.innerText = "❌"; }
+    } catch (e) { 
+        console.error(e);
+        if (syncBtn) syncBtn.innerText = "❌"; 
+    }
 }
 
-function calcularTotalAutomatico() {
-    // Multiplica K * E para cada producto y lo suma
-    let totalSuma = inventario.reduce((acc, p) => {
-        let precio = parseFloat(p.precio) || 0;
-        let cantVendida = parseFloat(p.vendidos) || 0;
-        return acc + (precio * cantVendida);
-    }, 0);
+function calcularVentasTotales() {
+    // Cálculo exacto: Suma de (Precio Columna E * Cantidad Vendida Columna K)
+    let totalSuma = 0;
+    
+    inventario.forEach(p => {
+        const precio = parseFloat(p.precio) || 0;
+        const cantidadVendida = parseFloat(p.vendidos) || 0;
+        totalSuma += (precio * cantidadVendida);
+    });
     
     document.getElementById('gran-total-dinero').innerText = `$${totalSuma.toLocaleString()}`;
 }
@@ -60,7 +65,9 @@ async function registrarVenta() {
     const btn = document.querySelector('.btn-save');
 
     const p = inventario.find(item => item.filaOriginal == fila);
-    const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+    const stockInicial = parseFloat(p.stock) || 0;
+    const vendidos = parseFloat(p.vendidos) || 0;
+    const disp = stockInicial - vendidos;
     
     if (disp < cantidad) return alert("¡Stock insuficiente!");
 
@@ -84,7 +91,7 @@ async function registrarVenta() {
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
-        alert("Venta registrada");
+        alert("Venta registrada con éxito");
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
         btn.disabled = false;
@@ -102,7 +109,9 @@ function filtrarProductos() {
 function actualizarSelect() {
     const s = document.getElementById('select-producto');
     s.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        const stockInicial = parseFloat(p.stock) || 0;
+        const vendidos = parseFloat(p.vendidos) || 0;
+        const disp = stockInicial - vendidos;
         return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
     }).join('');
 }
