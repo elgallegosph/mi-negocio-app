@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbynBZpdhzUR7oASi0Mg0xU6z3niwx_OjzRKB5CvNRmxxhvJVHLE_jJmjERSaajnLcZ7mg/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2ZlbtEHD8QYCEz3E6TcZIZbkpn6PDYAgnX6DNJf-LiYXBI494ZvI4JKZeETQNjc-B/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -34,17 +34,14 @@ function renderInventario() {
         const stockInicial = parseFloat(p.stock) || 0;
         const vendidos = parseFloat(p.vendidos) || 0;
         const disponible = stockInicial - vendidos;
-        const precioFormateado = parseFloat(p.precio || 0).toLocaleString('es-CO');
-        
         return `<li class="lista-item">
             <div class="product-info">
                 <span class="product-name">${p.nombre}</span><br>
-                <span class="stock-info">Vendidos: ${vendidos} | Stock inicial: ${stockInicial}</span>
-                <span class="price-tag">$${precioFormateado}</span>
+                <span style="font-size:0.85rem; color:#666;">Vendidos: ${vendidos}</span>
+                <span class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</span>
             </div>
             <div style="text-align:right">
-                <span class="stock-badge ${disponible <= 0 ? 'bg-empty' : 'bg-ok'}" 
-                      style="padding: 6px 12px; border-radius: 20px; font-weight: bold; color: white; background: ${disponible <= 0 ? '#ff4d4d' : '#2ecc71'}">
+                <span class="stock-badge" style="background:${disponible <= 0 ? '#ff4d4d':'#2ecc71'}; color:white; padding:5px 10px; border-radius:15px; font-weight:bold;">
                     ${disponible <= 0 ? 'AGOTADO' : disponible + ' disp.'}
                 </span>
             </div>
@@ -61,11 +58,13 @@ function switchTab(t) {
         sec.style.display = 'block';
         btn.classList.add('active');
     }
-    if(t === 'stats') setTimeout(dibujarGraficos, 200);
+    if(t === 'stats') setTimeout(dibujarGraficos, 300); // Tiempo suficiente para que el canvas sea visible
 }
 
 function dibujarGraficos() {
     const pink = '#d63384';
+    
+    // Gráfico de Métodos
     const ctxM = document.getElementById('canvasMetodos');
     if (ctxM) {
         if (charts.m) charts.m.destroy();
@@ -76,17 +75,22 @@ function dibujarGraficos() {
             options: { responsive: true, maintainAspectRatio: false }
         });
     }
+
+    // Gráfico Top 5 (Horizontal para mejor lectura)
     const ctxP = document.getElementById('canvasTop5');
     if (ctxP) {
         if (charts.p) charts.p.destroy();
-        const top5 = [...inventario].sort((a,b) => (parseFloat(b.vendidos)||0) - (parseFloat(a.vendidos)||0)).slice(0, 5);
+        const top5 = [...inventario]
+            .sort((a,b) => (parseFloat(b.vendidos)||0) - (parseFloat(a.vendidos)||0))
+            .slice(0, 5);
+
         charts.p = new Chart(ctxP, {
             type: 'bar',
             data: {
-                labels: top5.map(p => p.nombre.substring(0, 15)),
-                datasets: [{ label: 'Ventas', data: top5.map(p => p.vendidos), backgroundColor: pink }]
+                labels: top5.map(p => p.nombre.substring(0, 15) + '...'),
+                datasets: [{ label: 'Ventas', data: top5.map(p => p.vendidos), backgroundColor: pink, borderRadius: 5 }]
             },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } } }
         });
     }
 }
@@ -123,10 +127,10 @@ async function registrarVenta() {
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        alert("¡Venta Registrada!");
+        alert("Venta registrada con éxito");
         btn.disabled = false;
         cargarDesdeDrive();
-    } catch (e) { alert("Error"); btn.disabled = false; }
+    } catch (e) { alert("Error al registrar"); btn.disabled = false; }
 }
 
 function filtrarProductos() {
