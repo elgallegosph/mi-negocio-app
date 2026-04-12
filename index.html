@@ -6,6 +6,7 @@
     <title>Amare Beauty - Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         .price-tag { font-size: 1.4rem; color: #d63384; font-weight: 800; display: block; margin-top: 4px; }
         .product-name { font-size: 1.1rem; font-weight: 600; color: #333; }
@@ -64,7 +65,7 @@
                         <label>Cliente:</label><input type="text" id="nombre-cliente" placeholder="Nombre">
                         <label>WhatsApp:</label><input type="tel" id="tel-cliente" placeholder="300...">
                     </div>
-                    <button id="btn-registrar-final" onclick="registrarVenta()" class="btn-save" style="margin-top:20px;">REGISTRAR VENTA</button>
+                    <button id="btn-registrar-final" onclick="registrarVenta()" class="btn-save" style="margin-top:20px;">REGISTRAR VENTA Y PDF</button>
                 </div>
             </section>
 
