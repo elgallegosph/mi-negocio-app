@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4FJTWmp7ulS490aEeBzEyMEQwaKtrMhb8E8elSejL0DFbI-9GDSN-Svd_aRyXQM4GFA/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwr8F9rr8ZyxTcb2OoqSdxRM4Qn5Jn8mgMdSX-6L-BOUJlXxtLuXqpmy8oIXulgLkYrjg/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -10,19 +10,13 @@ async function cargarDesdeDrive() {
     try {
         const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
-        
         inventario = data.inventario || [];
         historial = data.historial || [];
-        
         renderInventario();
         calcularVentasTotales(); 
         actualizarSelect();
-        
         if (syncBtn) syncBtn.innerText = "🔄";
-    } catch (e) { 
-        console.error(e);
-        if (syncBtn) syncBtn.innerText = "❌"; 
-    }
+    } catch (e) { console.error(e); if (syncBtn) syncBtn.innerText = "❌"; }
 }
 
 function calcularVentasTotales() {
@@ -30,9 +24,7 @@ function calcularVentasTotales() {
     inventario.forEach(p => {
         const precio = parseFloat(p.precio) || 0;
         const unidadesVendidas = parseFloat(p.vendidos) || 0;
-        if (precio > 0 && unidadesVendidas > 0) {
-            sumaReal += (precio * unidadesVendidas);
-        }
+        if (precio > 0 && unidadesVendidas > 0) sumaReal += (precio * unidadesVendidas);
     });
     document.getElementById('gran-total-dinero').innerText = `$${sumaReal.toLocaleString('es-CO')}`;
 }
@@ -40,49 +32,43 @@ function calcularVentasTotales() {
 function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-    
     const sec = document.getElementById('sec-' + t);
     const btn = document.getElementById('tab-' + t);
-    
     if (sec && btn) {
         sec.style.display = 'block';
         btn.classList.add('active');
     }
-    
-    // Si entramos a estadísticas, forzamos la creación de los gráficos
-    if(t === 'stats') {
-        setTimeout(generarGraficosDinamicos, 100); 
-    }
+    if(t === 'stats') setTimeout(generarGraficosDinamicos, 150);
 }
 
 function generarGraficosDinamicos() {
-    // Colores corporativos Amare
-    const colores = ['#d63384', '#6610f2', '#fd7e14', '#20c997', '#0dcaf0'];
+    const pinkAmare = '#d63384';
+    const purpleAmare = '#6610f2';
 
-    // 1. Gráfico de Métodos (Dona)
+    // 1. Gráfico de Métodos
     const ctxM = document.getElementById('chartMetodos');
     if (ctxM) {
-        if (charts.m) charts.m.destroy(); // Limpiar gráfico anterior
+        if (charts.m) charts.m.destroy();
         const metData = historial.reduce((a, c) => (a[c.metodo] = (a[c.metodo] || 0) + 1, a), {});
-        
         charts.m = new Chart(ctxM, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(metData),
                 datasets: [{
                     data: Object.values(metData),
-                    backgroundColor: colores
+                    backgroundColor: [pinkAmare, purpleAmare, '#fd7e14', '#20c997', '#0dcaf0'],
+                    hoverOffset: 10
                 }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
         });
     }
 
-    // 2. Gráfico de Productos (Barras)
+    // 2. Gráfico TOP 5 MEJORADO (Horizontal)
     const ctxP = document.getElementById('chartProductos');
     if (ctxP) {
-        if (charts.p) charts.p.destroy(); // Limpiar gráfico anterior
-        // Ordenamos el inventario por los más vendidos (Columna K)
+        if (charts.p) charts.p.destroy();
+        
         const top5 = [...inventario]
             .sort((a, b) => (parseFloat(b.vendidos) || 0) - (parseFloat(a.vendidos) || 0))
             .slice(0, 5);
@@ -90,18 +76,27 @@ function generarGraficosDinamicos() {
         charts.p = new Chart(ctxP, {
             type: 'bar',
             data: {
-                labels: top5.map(p => p.nombre),
+                labels: top5.map(p => p.nombre.length > 20 ? p.nombre.substring(0, 20) + '...' : p.nombre),
                 datasets: [{
-                    label: 'Unidades Vendidas',
+                    label: 'Unidades',
                     data: top5.map(p => parseFloat(p.vendidos) || 0),
-                    backgroundColor: '#d63384aa',
-                    borderColor: '#d63384',
-                    borderWidth: 1
+                    backgroundColor: pinkAmare,
+                    borderRadius: 5,
+                    barThickness: 25
                 }]
             },
             options: {
-                scales: { y: { beginAtZero: true } },
-                plugins: { legend: { display: false } }
+                indexAxis: 'y', // Lo hace horizontal para que se lea mejor
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, grid: { display: false } },
+                    y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { backgroundColor: purpleAmare }
+                }
             }
         });
     }
@@ -111,11 +106,9 @@ function renderInventario() {
     const lista = document.getElementById('lista-inventario');
     if (!lista) return;
     lista.innerHTML = inventario.map(p => {
-        const stockInicial = parseFloat(p.stock) || 0;
-        const vendidos = parseFloat(p.vendidos) || 0;
-        const disp = stockInicial - vendidos;
+        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         return `<li>
-            <div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${vendidos}</small></div>
+            <div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${p.vendidos || 0}</small></div>
             <div style="text-align:right">
                 <span class="stock-badge ${disp <= 0 ? 'bg-empty' : 'bg-ok'}">${disp <= 0 ? 'AGOTADO' : 'Cant: ' + disp}</span><br>
                 <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
