@@ -27,28 +27,53 @@ function renderInventario() {
     if (!lista) return;
     lista.innerHTML = inventario.map(p => {
         const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        // Agregamos el onclick para ir directamente a venta
-        return `<li class="lista-item" onclick="irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')">
+        const agotado = disponible <= 0;
+        
+        return `<li class="lista-item ${agotado ? 'sin-stock' : ''}" 
+            onclick="${agotado ? "alert('Este producto no tiene stock')" : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}">
             <div class="product-info">
                 <span class="product-name">${p.nombre}</span><br>
                 <span style="font-size:0.85rem; color:#666;">Disponibles: ${disponible}</span>
                 <span class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</span>
             </div>
             <div style="text-align:right">
-                <span class="stock-badge" style="background:${disponible <= 0 ? '#ff4d4d':'#2ecc71'}; color:white; padding:5px 10px; border-radius:15px; font-weight:bold;">
-                    VENDER ➔
+                <span class="stock-badge" style="background:${agotado ? '#ccc' : '#2ecc71'}; color:white; padding:5px 10px; border-radius:15px; font-weight:bold;">
+                    ${agotado ? 'AGOTADO' : 'VENDER ➔'}
                 </span>
             </div>
         </li>`;
     }).join('');
 }
 
-// NUEVA FUNCIÓN: Salta directamente a la pestaña de ventas con el producto elegido
 function irAVenta(fila, nombre) {
     switchTab('ventas');
     document.getElementById('busqueda-venta').value = nombre;
-    filtrarSelectVentas(); // Filtra el select para que aparezca el producto
+    filtrarSelectVentas();
     document.getElementById('select-producto').value = fila;
+    validarStockSeleccionado();
+}
+
+// NUEVA FUNCIÓN: Bloquea el botón de registro si no hay stock suficiente
+function validarStockSeleccionado() {
+    const select = document.getElementById('select-producto');
+    const btn = document.getElementById('btn-registrar-final');
+    const cantInput = document.getElementById('cant-venta');
+    const cantidad = parseInt(cantInput.value) || 0;
+    
+    if (!select.value) return;
+    
+    const p = inventario.find(item => item.filaOriginal == select.value);
+    const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+    
+    if (disponible <= 0 || cantidad > disponible) {
+        btn.disabled = true;
+        btn.classList.add('btn-disabled');
+        btn.innerText = disponible <= 0 ? "SIN STOCK" : "STOCK INSUFICIENTE";
+    } else {
+        btn.disabled = false;
+        btn.classList.remove('btn-disabled');
+        btn.innerText = "REGISTRAR VENTA";
+    }
 }
 
 function switchTab(t) {
@@ -113,24 +138,18 @@ function filtrarSelectVentas() {
 
 async function registrarVenta() {
     const select = document.getElementById('select-producto');
-    if (!select.value) return alert("Selecciona un producto");
-    
     const fila = select.value;
     const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
     const cantidad = parseInt(document.getElementById('cant-venta').value);
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
     let telInput = document.getElementById('tel-cliente').value.replace(/\s+/g, '');
-    const btn = document.querySelector('.btn-save');
+    const btn = document.getElementById('btn-registrar-final');
 
-    const p = inventario.find(item => item.filaOriginal == fila);
-    const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-    if (disp < cantidad) return alert("¡Stock insuficiente!");
-
-    let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
     btn.disabled = true;
 
     try {
+        let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -146,7 +165,6 @@ async function registrarVenta() {
                 : (metodo === "Separado") 
                 ? `¡Hola ${cliente}! ✨ Tu producto ${nombreProd} ha sido separado en Amare Beauty. 📦`
                 : `¡Hola ${cliente}! ✨ Tu pedido de ${nombreProd} queda pendiente por pagar en Amare Beauty. 📝`;
-            
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
@@ -154,7 +172,7 @@ async function registrarVenta() {
         document.getElementById('busqueda-venta').value = "";
         btn.disabled = false;
         cargarDesdeDrive();
-        switchTab('inventario'); // Regresa al inventario tras vender
+        switchTab('inventario');
     } catch (e) { alert("Error"); btn.disabled = false; }
 }
 
