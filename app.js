@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGA0kqsemniAT14iKs9y3LQ5RgOBYTbGlTWrTIUqHy0KiR7rB1HiWS-Gjfb--B8Rlb9Q/exec"; 
+const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
 
@@ -142,7 +142,6 @@ async function registrarVenta() {
 
     btn.disabled = true;
     try {
-        // CORRECCIÓN AQUÍ: Se cambió CODIGO_PAis por CODIGO_PAIS
         let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
         
         await fetch(SCRIPT_URL, {
@@ -156,7 +155,16 @@ async function registrarVenta() {
         await generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
 
         if (telFinal !== "N/A") {
-            window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent("¡Hola " + cliente + "! Gracias por tu compra en Amare Beauty. ✨")}`, '_blank');
+            let mensajeWhatsApp = "";
+            
+            // Lógica de mensajes según el método de pago
+            if (metodo === "Fiado" || metodo === "Separado") {
+                mensajeWhatsApp = `¡Hola ${cliente}! ✨ Te envío el comprobante de tu producto: *${nombreProd}*. Recuerda que quedó pendiente de pago bajo la modalidad de *${metodo}*. ¡Gracias por confiar en Amare Beauty! ❤️`;
+            } else {
+                mensajeWhatsApp = `¡Hola ${cliente}! ✨ Gracias por tu compra de *${nombreProd}* en Amare Beauty. ❤️ Adjunto tu comprobante de pago por valor de $${totalVenta.toLocaleString('es-CO')}. ¡Que lo disfrutes!`;
+            }
+
+            window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensajeWhatsApp)}`, '_blank');
         }
 
         alert("Venta registrada con éxito.");
