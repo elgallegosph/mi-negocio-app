@@ -4,19 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amare Beauty - Gestión</title>
-    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         .price-tag { font-size: 1.4rem; color: #d63384; font-weight: 800; display: block; margin-top: 4px; }
-        .product-info { flex: 1; }
         .product-name { font-size: 1.1rem; font-weight: 600; color: #333; }
-        .stock-info { font-size: 0.85rem; color: #666; }
         .lista-item { 
             display: flex; justify-content: space-between; align-items: center;
             padding: 15px; border-bottom: 1px solid #eee; background: white;
             margin-bottom: 8px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
+        .chart-container { position: relative; height: 300px; width: 100%; margin-bottom: 30px; }
     </style>
 </head>
 <body>
@@ -47,29 +45,29 @@
                 <div class="venta-form">
                     <label>Producto:</label><select id="select-producto"></select>
                     <label>Cantidad:</label><input type="number" id="cant-venta" value="1" min="1">
-                    <label>Método de Pago:</label>
+                    <label>Método:</label>
                     <select id="metodo-pago">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Transferencia">📱 Transferencia</option>
                         <option value="Separado">📦 Separado</option>
                         <option value="Fiado">📝 Fiado</option>
                     </select>
-                    <div class="cliente-box" style="margin-top:15px; border-left: 4px solid #d63384; padding-left: 15px;">
-                        <label>Cliente:</label><input type="text" id="nombre-cliente" placeholder="Nombre">
-                        <label>WhatsApp:</label><input type="tel" id="tel-cliente" placeholder="300...">
+                    <div style="margin-top:15px; border-left: 4px solid #d63384; padding-left: 15px;">
+                        <label>Cliente:</label><input type="text" id="nombre-cliente">
+                        <label>WhatsApp:</label><input type="tel" id="tel-cliente">
                     </div>
                     <button onclick="registrarVenta()" class="btn-save" style="margin-top:20px;">REGISTRAR VENTA</button>
                 </div>
             </section>
 
             <section id="sec-stats" class="tab-content" style="display:none; padding: 15px;">
-                <div class="chart-card" style="background:white; padding:15px; border-radius:12px; margin-bottom:20px;">
-                    <h3 style="text-align:center; color:#d63384;">📊 Métodos de Pago</h3>
-                    <canvas id="canvasMetodos"></canvas>
-                </div>
                 <div class="chart-card" style="background:white; padding:15px; border-radius:12px;">
+                    <h3 style="text-align:center; color:#d63384;">📊 Métodos de Pago</h3>
+                    <div class="chart-container"><canvas id="canvasMetodos"></canvas></div>
+                </div>
+                <div class="chart-card" style="background:white; padding:15px; border-radius:12px; margin-top:20px;">
                     <h3 style="text-align:center; color:#6610f2;">🏆 Top 5 Productos</h3>
-                    <div style="height: 250px;"><canvas id="canvasTop5"></canvas></div>
+                    <div class="chart-container"><canvas id="canvasTop5"></canvas></div>
                 </div>
             </section>
         </main>
