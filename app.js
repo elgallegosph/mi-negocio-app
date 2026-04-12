@@ -28,9 +28,8 @@ function renderInventario() {
     lista.innerHTML = inventario.map(p => {
         const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         const agotado = disponible <= 0;
-        
         return `<li class="lista-item ${agotado ? 'sin-stock' : ''}" 
-            onclick="${agotado ? "alert('Este producto no tiene stock')" : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}">
+            onclick="${agotado ? "alert('Sin stock')" : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}">
             <div class="product-info">
                 <span class="product-name">${p.nombre}</span><br>
                 <span style="font-size:0.85rem; color:#666;">Disponibles: ${disponible}</span>
@@ -53,27 +52,115 @@ function irAVenta(fila, nombre) {
     validarStockSeleccionado();
 }
 
-// NUEVA FUNCIÓN: Bloquea el botón de registro si no hay stock suficiente
 function validarStockSeleccionado() {
     const select = document.getElementById('select-producto');
     const btn = document.getElementById('btn-registrar-final');
     const cantInput = document.getElementById('cant-venta');
     const cantidad = parseInt(cantInput.value) || 0;
-    
     if (!select.value) return;
-    
     const p = inventario.find(item => item.filaOriginal == select.value);
     const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-    
     if (disponible <= 0 || cantidad > disponible) {
-        btn.disabled = true;
-        btn.classList.add('btn-disabled');
-        btn.innerText = disponible <= 0 ? "SIN STOCK" : "STOCK INSUFICIENTE";
+        btn.disabled = true; btn.classList.add('btn-disabled');
+        btn.innerText = disponible <= 0 ? "SIN STOCK" : "REBASA STOCK";
     } else {
-        btn.disabled = false;
-        btn.classList.remove('btn-disabled');
-        btn.innerText = "REGISTRAR VENTA";
+        btn.disabled = false; btn.classList.remove('btn-disabled');
+        btn.innerText = "REGISTRAR VENTA Y PDF";
     }
+}
+
+function generarPDF(datos) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const fecha = new Date().toLocaleDateString();
+
+    // Diseño de Factura
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(214, 51, 132); // Color Rosa Amare
+    doc.text("AMARE BEAUTY", 105, 20, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text("Comprobante de Venta", 105, 28, { align: "center" });
+    
+    doc.setDrawColor(214, 51, 132);
+    doc.line(20, 35, 190, 35);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0);
+    doc.text(`Fecha: ${fecha}`, 20, 45);
+    doc.text(`Cliente: ${datos.cliente}`, 20, 52);
+    doc.text(`Método: ${datos.metodo}`, 20, 59);
+
+    // Tabla de producto
+    doc.setFillColor(245, 245, 245);
+    doc.rect(20, 70, 170, 10, 'F');
+    doc.setFont("helvetica", "bold");
+    doc.text("Producto", 25, 77);
+    doc.text("Cant.", 120, 77);
+    doc.text("Subtotal", 160, 77);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(datos.producto, 25, 90);
+    doc.text(datos.cantidad.toString(), 125, 90);
+    doc.text(`$${datos.total.toLocaleString('es-CO')}`, 160, 90);
+
+    doc.line(20, 100, 190, 100);
+    doc.setFontSize(14);
+    doc.text("TOTAL PAGADO:", 120, 110);
+    doc.text(`$${datos.total.toLocaleString('es-CO')}`, 165, 110);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.text("¡Gracias por confiar en Amare Beauty!", 105, 130, { align: "center" });
+
+    doc.save(`Factura_Amare_${datos.cliente}_${Date.now()}.pdf`);
+}
+
+async function registrarVenta() {
+    const select = document.getElementById('select-producto');
+    const fila = select.value;
+    const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
+    const cantidad = parseInt(document.getElementById('cant-venta').value);
+    const metodo = document.getElementById('metodo-pago').value;
+    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
+    let telInput = document.getElementById('tel-cliente').value.replace(/\s+/g, '');
+    const btn = document.getElementById('btn-registrar-final');
+
+    const p = inventario.find(item => item.filaOriginal == fila);
+    const totalVenta = (parseFloat(p.precio) || 0) * cantidad;
+
+    btn.disabled = true;
+    try {
+        let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
+        await fetch(SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors',
+            body: JSON.stringify({
+                action: "venta", fila: parseInt(fila), productoNombre: nombreProd,
+                cantidad, metodo, cliente, telefono: telFinal
+            })
+        });
+
+        // Generar Factura PDF
+        generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
+
+        // Enviar WhatsApp
+        if (telFinal !== "N/A") {
+            let msg = (metodo === "Efectivo" || metodo === "Transferencia") 
+                ? `¡Hola ${cliente}! ✨ Gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`
+                : (metodo === "Separado") 
+                ? `¡Hola ${cliente}! ✨ Tu producto ${nombreProd} ha sido separado en Amare Beauty. 📦`
+                : `¡Hola ${cliente}! ✨ Tu pedido de ${nombreProd} queda pendiente por pagar en Amare Beauty. 📝`;
+            window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        alert("¡Venta Registrada y Factura Generada!");
+        document.getElementById('busqueda-venta').value = "";
+        btn.disabled = false;
+        cargarDesdeDrive();
+        switchTab('inventario');
+    } catch (e) { alert("Error"); btn.disabled = false; }
 }
 
 function switchTab(t) {
@@ -92,6 +179,37 @@ function switchTab(t) {
 function calcularVentasTotales() {
     const total = inventario.reduce((sum, p) => sum + ((parseFloat(p.precio) || 0) * (parseFloat(p.vendidos) || 0)), 0);
     document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
+}
+
+function filtrarSelectVentas() {
+    const txt = document.getElementById('busqueda-venta').value.toLowerCase();
+    const select = document.getElementById('select-producto');
+    select.innerHTML = "";
+    inventario.forEach(p => {
+        if (p.nombre.toLowerCase().includes(txt)) {
+            const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+            const opt = document.createElement("option");
+            opt.value = p.filaOriginal;
+            opt.textContent = `${p.nombre} (${disp} disp.)`;
+            select.appendChild(opt);
+        }
+    });
+}
+
+function filtrarProductos() {
+    const txt = document.getElementById('busqueda').value.toLowerCase();
+    document.querySelectorAll('#lista-inventario li').forEach(li => {
+        li.style.display = li.textContent.toLowerCase().includes(txt) ? 'flex' : 'none';
+    });
+}
+
+function actualizarSelect() {
+    const select = document.getElementById('select-producto');
+    if (!select) return;
+    select.innerHTML = inventario.map(p => {
+        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
+    }).join('');
 }
 
 function dibujarGraficos() {
@@ -119,77 +237,6 @@ function dibujarGraficos() {
             options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
         });
     }
-}
-
-function filtrarSelectVentas() {
-    const txt = document.getElementById('busqueda-venta').value.toLowerCase();
-    const select = document.getElementById('select-producto');
-    select.innerHTML = "";
-    inventario.forEach(p => {
-        if (p.nombre.toLowerCase().includes(txt)) {
-            const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-            const opt = document.createElement("option");
-            opt.value = p.filaOriginal;
-            opt.textContent = `${p.nombre} (${disp} disp.)`;
-            select.appendChild(opt);
-        }
-    });
-}
-
-async function registrarVenta() {
-    const select = document.getElementById('select-producto');
-    const fila = select.value;
-    const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
-    const cantidad = parseInt(document.getElementById('cant-venta').value);
-    const metodo = document.getElementById('metodo-pago').value;
-    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
-    let telInput = document.getElementById('tel-cliente').value.replace(/\s+/g, '');
-    const btn = document.getElementById('btn-registrar-final');
-
-    btn.disabled = true;
-
-    try {
-        let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify({
-                action: "venta", fila: parseInt(fila), productoNombre: nombreProd,
-                cantidad, metodo, cliente, telefono: telFinal
-            })
-        });
-
-        if (telFinal !== "N/A") {
-            let msg = (metodo === "Efectivo" || metodo === "Transferencia") 
-                ? `¡Hola ${cliente}! ✨ Gracias por tu compra de ${nombreProd} en Amare Beauty. ❤️`
-                : (metodo === "Separado") 
-                ? `¡Hola ${cliente}! ✨ Tu producto ${nombreProd} ha sido separado en Amare Beauty. 📦`
-                : `¡Hola ${cliente}! ✨ Tu pedido de ${nombreProd} queda pendiente por pagar en Amare Beauty. 📝`;
-            window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        alert("¡Venta Registrada!");
-        document.getElementById('busqueda-venta').value = "";
-        btn.disabled = false;
-        cargarDesdeDrive();
-        switchTab('inventario');
-    } catch (e) { alert("Error"); btn.disabled = false; }
-}
-
-function filtrarProductos() {
-    const txt = document.getElementById('busqueda').value.toLowerCase();
-    document.querySelectorAll('#lista-inventario li').forEach(li => {
-        li.style.display = li.textContent.toLowerCase().includes(txt) ? 'flex' : 'none';
-    });
-}
-
-function actualizarSelect() {
-    const select = document.getElementById('select-producto');
-    if (!select) return;
-    select.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
-    }).join('');
 }
 
 window.onload = cargarDesdeDrive;
