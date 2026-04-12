@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2ZlbtEHD8QYCEz3E6TcZIZbkpn6PDYAgnX6DNJf-LiYXBI494ZvI4JKZeETQNjc-B/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqSj7G0RydioZKx-CYonBBQUwZ2RQoguuM38IKmqfhcJnab9zfRdweNgsWkhofHIQU/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -37,7 +37,7 @@ function renderInventario() {
         return `<li class="lista-item">
             <div class="product-info">
                 <span class="product-name">${p.nombre}</span><br>
-                <span style="font-size:0.85rem; color:#666;">Vendidos: ${vendidos}</span>
+                <span style="font-size:0.85rem; color:#666;">Vendidos: ${vendidos} | Stock inicial: ${stockInicial}</span>
                 <span class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</span>
             </div>
             <div style="text-align:right">
@@ -58,13 +58,11 @@ function switchTab(t) {
         sec.style.display = 'block';
         btn.classList.add('active');
     }
-    if(t === 'stats') setTimeout(dibujarGraficos, 300); // Tiempo suficiente para que el canvas sea visible
+    if(t === 'stats') setTimeout(dibujarGraficos, 300);
 }
 
 function dibujarGraficos() {
     const pink = '#d63384';
-    
-    // Gráfico de Métodos
     const ctxM = document.getElementById('canvasMetodos');
     if (ctxM) {
         if (charts.m) charts.m.destroy();
@@ -75,28 +73,41 @@ function dibujarGraficos() {
             options: { responsive: true, maintainAspectRatio: false }
         });
     }
-
-    // Gráfico Top 5 (Horizontal para mejor lectura)
     const ctxP = document.getElementById('canvasTop5');
     if (ctxP) {
         if (charts.p) charts.p.destroy();
-        const top5 = [...inventario]
-            .sort((a,b) => (parseFloat(b.vendidos)||0) - (parseFloat(a.vendidos)||0))
-            .slice(0, 5);
-
+        const top5 = [...inventario].sort((a,b) => (parseFloat(b.vendidos)||0) - (parseFloat(a.vendidos)||0)).slice(0, 5);
         charts.p = new Chart(ctxP, {
             type: 'bar',
             data: {
-                labels: top5.map(p => p.nombre.substring(0, 15) + '...'),
-                datasets: [{ label: 'Ventas', data: top5.map(p => p.vendidos), backgroundColor: pink, borderRadius: 5 }]
+                labels: top5.map(p => p.nombre.substring(0, 15)),
+                datasets: [{ label: 'Ventas', data: top5.map(p => p.vendidos), backgroundColor: pink }]
             },
             options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } } }
         });
     }
 }
 
+function filtrarSelectVentas() {
+    const txt = document.getElementById('busqueda-venta').value.toLowerCase();
+    const select = document.getElementById('select-producto');
+    select.innerHTML = "";
+    
+    inventario.forEach(p => {
+        if (p.nombre.toLowerCase().includes(txt)) {
+            const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+            const opt = document.createElement("option");
+            opt.value = p.filaOriginal;
+            opt.textContent = `${p.nombre} (${disp} disp.)`;
+            select.appendChild(opt);
+        }
+    });
+}
+
 async function registrarVenta() {
     const select = document.getElementById('select-producto');
+    if (!select.value) return alert("Selecciona un producto");
+    
     const fila = select.value;
     const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
     const cantidad = parseInt(document.getElementById('cant-venta').value);
@@ -127,10 +138,11 @@ async function registrarVenta() {
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        alert("Venta registrada con éxito");
+        alert("¡Venta Registrada!");
+        document.getElementById('busqueda-venta').value = "";
         btn.disabled = false;
         cargarDesdeDrive();
-    } catch (e) { alert("Error al registrar"); btn.disabled = false; }
+    } catch (e) { alert("Error"); btn.disabled = false; }
 }
 
 function filtrarProductos() {
@@ -141,8 +153,9 @@ function filtrarProductos() {
 }
 
 function actualizarSelect() {
-    const s = document.getElementById('select-producto');
-    if (s) s.innerHTML = inventario.map(p => {
+    const select = document.getElementById('select-producto');
+    if (!select) return;
+    select.innerHTML = inventario.map(p => {
         const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
     }).join('');
