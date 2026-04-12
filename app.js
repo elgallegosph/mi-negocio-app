@@ -1,7 +1,5 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6_7DQLfpxqg2JIe-EPulXmx5-Zw6PLFEhLQR-mA7Rwcr-lFoN71AdJdgZtAPsSUodXQ/exec"; // Asegúrate de que sea tu URL real
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGA0kqsemniAT14iKs9y3LQ5RgOBYTbGlTWrTIUqHy0KiR7rB1HiWS-Gjfb--B8Rlb9Q/exec"; 
 const CODIGO_PAIS = "57";
-
-// CORRECCIÓN: Usamos la ruta local del archivo que subiste a GitHub
 const LOGO_URL = "./logo.png"; 
 
 let inventario = [];
@@ -11,7 +9,7 @@ let charts = {};
 async function getBase64Image(url) {
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error("Error al cargar imagen local");
+        if (!response.ok) throw new Error("Error imagen local");
         const blob = await response.blob();
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -19,7 +17,7 @@ async function getBase64Image(url) {
             reader.readAsDataURL(blob);
         });
     } catch (e) {
-        console.error("Error procesando logo:", e);
+        console.error("Error logo:", e);
         return null;
     }
 }
@@ -43,13 +41,13 @@ function renderInventario() {
     const lista = document.getElementById('lista-inventario');
     if (!lista) return;
     lista.innerHTML = inventario.map(p => {
-        const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        const agotado = disponible <= 0;
+        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        const agotado = disp <= 0;
         return `<li class="lista-item ${agotado ? 'sin-stock' : ''}" 
             onclick="${agotado ? "alert('Sin stock')" : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}">
             <div class="product-info">
                 <span class="product-name">${p.nombre}</span><br>
-                <span style="font-size:0.85rem; color:#666;">Disponibles: ${disponible}</span>
+                <span style="font-size:0.85rem; color:#666;">Disponibles: ${disp}</span>
                 <span class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</span>
             </div>
             <div style="text-align:right">
@@ -76,8 +74,8 @@ function validarStockSeleccionado() {
     const cantidad = parseInt(cantInput.value) || 0;
     if (!select.value) return;
     const p = inventario.find(item => item.filaOriginal == select.value);
-    const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-    if (disponible <= 0 || cantidad > disponible) {
+    const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+    if (disp <= 0 || cantidad > disp) {
         btn.disabled = true; btn.classList.add('btn-disabled');
         btn.innerText = "STOCK INSUFICIENTE";
     } else {
@@ -89,56 +87,44 @@ function validarStockSeleccionado() {
 async function generarPDF(datos) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    
     const imgData = await getBase64Image(LOGO_URL);
-
     if (imgData) {
-        // Marca de agua
         doc.setGState(new doc.GState({ opacity: 0.07 }));
         doc.addImage(imgData, 'PNG', 45, 85, 120, 120);
         doc.setGState(new doc.GState({ opacity: 1.0 }));
-        // Logo cabecera
         doc.addImage(imgData, 'PNG', 15, 12, 35, 35);
     }
-
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(214, 51, 132); 
     doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
-    
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text("Factura: #" + Date.now().toString().slice(-6), 195, 32, { align: "right" });
-    
     doc.setDrawColor(214, 51, 132);
     doc.line(15, 50, 195, 50);
-
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0);
     doc.setFontSize(11);
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 60);
     doc.text(`Cliente: ${datos.cliente}`, 15, 67);
     doc.text(`Pago: ${datos.metodo}`, 15, 74);
-
     doc.setFillColor(245, 245, 245);
     doc.rect(15, 85, 180, 10, 'F');
     doc.setFont("helvetica", "bold");
     doc.text("Producto", 20, 92);
     doc.text("Cant.", 130, 92);
     doc.text("Total", 175, 92);
-
     doc.setFont("helvetica", "normal");
     doc.text(datos.producto, 20, 105);
     doc.text(datos.cantidad.toString(), 135, 105);
     doc.text(`$${datos.total.toLocaleString()}`, 175, 105, { align: "right" });
-
     doc.line(15, 115, 195, 115);
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("TOTAL:", 130, 130);
     doc.text(`$${datos.total.toLocaleString('es-CO')}`, 195, 130, { align: "right" });
-
-    doc.save(`Factura_Amare_${datos.cliente}.pdf`);
+    doc.save(`Factura_${datos.cliente}.pdf`);
 }
 
 async function registrarVenta() {
@@ -156,7 +142,9 @@ async function registrarVenta() {
 
     btn.disabled = true;
     try {
-        let telFinal = telInput ? (telInput.startsWith(CODIGO_PAis) ? telInput : CODIGO_PAIS + telInput) : "N/A";
+        // CORRECCIÓN AQUÍ: Se cambió CODIGO_PAis por CODIGO_PAIS
+        let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
+        
         await fetch(SCRIPT_URL, {
             method: 'POST', mode: 'no-cors',
             body: JSON.stringify({
@@ -171,11 +159,11 @@ async function registrarVenta() {
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent("¡Hola " + cliente + "! Gracias por tu compra en Amare Beauty. ✨")}`, '_blank');
         }
 
-        alert("Venta procesada con éxito.");
+        alert("Venta registrada con éxito.");
         btn.disabled = false;
         cargarDesdeDrive();
         switchTab('inventario');
-    } catch (e) { alert("Error"); btn.disabled = false; }
+    } catch (e) { alert("Error al registrar"); btn.disabled = false; }
 }
 
 function switchTab(t) {
