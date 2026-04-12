@@ -1,4 +1,4 @@
-const SCRIPT_URL = "Thttps://script.google.com/macros/s/AKfycbyd2OnCiHz030cCiIKVvXapPJ4XpUthAFXjAw-FFaHf7beh9AI-MNZPHGZys3v0IN1JOg/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgDD-haPIbsz2Bqcm2LFjVUL_Bwnlhu8V18WQ8mZ7nI8u5Wis1V3BxKF1jkCGjkQ9-UQ/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
@@ -15,7 +15,7 @@ async function cargarDesdeDrive() {
         historial = data.historial || [];
         
         renderInventario();
-        calcularVentasTotales(); 
+        calcularVentasTotales(); // CÁLCULO REAL
         actualizarSelect();
         
         if (syncBtn) syncBtn.innerText = "🔄";
@@ -26,24 +26,29 @@ async function cargarDesdeDrive() {
 }
 
 function calcularVentasTotales() {
-    // Cálculo: Suma de (Precio E * Cantidad Vendida K)
-    let totalSuma = 0;
+    // Cálculo: Suma de (Precio E * Unidades Vendidas K)
+    let sumaReal = 0;
+    
     inventario.forEach(p => {
         const precio = parseFloat(p.precio) || 0;
-        const cantidadVendida = parseFloat(p.vendidos) || 0;
-        totalSuma += (precio * cantidadVendida);
+        const unidadesVendidas = parseFloat(p.vendidos) || 0;
+        
+        // Solo sumamos si ambos valores son mayores a cero para evitar errores de celdas vacías
+        if (precio > 0 && unidadesVendidas > 0) {
+            sumaReal += (precio * unidadesVendidas);
+        }
     });
-    document.getElementById('gran-total-dinero').innerText = `$${totalSuma.toLocaleString()}`;
+    
+    // Formato de moneda local
+    document.getElementById('gran-total-dinero').innerText = `$${sumaReal.toLocaleString('es-CO')}`;
 }
 
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
     lista.innerHTML = inventario.map(p => {
-        const stockInicial = parseFloat(p.stock) || 0;
-        const vendidos = parseFloat(p.vendidos) || 0;
-        const disp = stockInicial - vendidos;
+        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         return `<li>
-            <div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${vendidos}</small></div>
+            <div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${p.vendidos || 0}</small></div>
             <div style="text-align:right">
                 <span class="stock-badge ${disp <= 0 ? 'bg-empty' : 'bg-ok'}">${disp <= 0 ? 'AGOTADO' : 'Cant: ' + disp}</span><br>
                 <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
@@ -87,7 +92,7 @@ async function registrarVenta() {
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
-        alert("Venta registrada");
+        alert("Venta registrada con éxito");
         document.getElementById('nombre-cliente').value = "";
         document.getElementById('tel-cliente').value = "";
         btn.disabled = false;
@@ -111,43 +116,44 @@ function actualizarSelect() {
 }
 
 function switchTab(t) {
-    // Ocultar todos los contenidos
+    // 1. Ocultar secciones
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     
-    // Quitar clase 'active' de todos los botones
+    // 2. Quitar active de botones
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     
-    // Mostrar contenido seleccionado
-    const targetSec = document.getElementById('sec-' + t);
-    const targetBtn = document.getElementById('tab-' + t);
+    // 3. Mostrar la sección elegida y activar botón
+    const sec = document.getElementById('sec-' + t);
+    const btn = document.getElementById('tab-' + t);
     
-    if (targetSec && targetBtn) {
-        targetSec.style.display = 'block';
-        targetBtn.classList.add('active');
-    }
+    if (sec) sec.style.display = 'block';
+    if (btn) btn.classList.add('active'); // Aquí ya no dará error porque los ID coinciden
     
     if(t === 'stats') generarGraficos();
 }
 
 function generarGraficos() {
-    const ctxM = document.getElementById('chartMetodos');
-    const ctxP = document.getElementById('chartProductos');
-    if (!ctxM || !ctxP) return;
-
     if (charts.m) charts.m.destroy();
     if (charts.p) charts.p.destroy();
     
     const met = historial.reduce((a, c) => (a[c.metodo] = (a[c.metodo] || 0) + 1, a), {});
-    charts.m = new Chart(ctxM, {
-        type: 'pie',
-        data: { labels: Object.keys(met), datasets: [{ data: Object.values(met), backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56'] }] }
-    });
+    const ctxM = document.getElementById('chartMetodos');
+    if (ctxM) {
+        charts.m = new Chart(ctxM, {
+            type: 'pie',
+            data: { labels: Object.keys(met), datasets: [{ data: Object.values(met), backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56'] }] }
+        });
+    }
+
     const pro = historial.reduce((a, c) => (a[c.producto] = (a[c.producto] || 0) + c.cantidad, a), {});
     const top = Object.entries(pro).sort((a,b) => b[1]-a[1]).slice(0, 5);
-    charts.p = new Chart(ctxP, {
-        type: 'bar',
-        data: { labels: top.map(x => x[0]), datasets: [{ label: 'Ventas', data: top.map(x => x[1]), backgroundColor: '#d63384' }] }
-    });
+    const ctxP = document.getElementById('chartProductos');
+    if (ctxP) {
+        charts.p = new Chart(ctxP, {
+            type: 'bar',
+            data: { labels: top.map(x => x[0]), datasets: [{ label: 'Ventas', data: top.map(x => x[1]), backgroundColor: '#d63384' }] }
+        });
+    }
 }
 
 window.onload = cargarDesdeDrive;
