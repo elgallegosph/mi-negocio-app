@@ -1,41 +1,25 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbza9uk375XPdXJmCHA25eww1xg4uvNapi1pKIiRpILhxQndc7F5G_unnFPYXsCwZ5SeNw/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6_7DQLfpxqg2JIe-EPulXmx5-Zw6PLFEhLQR-mA7Rwcr-lFoN71AdJdgZtAPsSUodXQ/exec"; 
 const CODIGO_PAIS = "57";
 let inventario = [];
 let historial = [];
 let charts = {};
 
-// Carga rápida: usa caché del navegador para evitar esperas si los datos son idénticos
 async function cargarDesdeDrive() {
     const syncBtn = document.getElementById('sync-btn');
-    if (syncBtn) {
-        syncBtn.innerText = "⏳";
-        syncBtn.style.transform = "rotate(360deg)";
-    }
-    
+    if (syncBtn) syncBtn.innerText = "⏳";
     try {
         const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
         const data = await response.json();
-        
         inventario = data.inventario || [];
         historial = data.historial || [];
-        
         renderInventario();
         calcularVentasTotales(); 
         actualizarSelect();
-        
-        if (syncBtn) {
-            syncBtn.innerText = "🔄";
-            syncBtn.style.transform = "rotate(0deg)";
-        }
+        if (syncBtn) syncBtn.innerText = "🔄";
     } catch (e) {
-        console.error("Error cargando datos:", e);
+        console.error(e);
         if (syncBtn) syncBtn.innerText = "❌";
     }
-}
-
-function calcularVentasTotales() {
-    const total = inventario.reduce((sum, p) => sum + ((parseFloat(p.precio) || 0) * (parseFloat(p.vendidos) || 0)), 0);
-    document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
 }
 
 function renderInventario() {
@@ -43,37 +27,46 @@ function renderInventario() {
     if (!lista) return;
     lista.innerHTML = inventario.map(p => {
         const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<li class="lista-item">
+        // Agregamos el onclick para ir directamente a venta
+        return `<li class="lista-item" onclick="irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')">
             <div class="product-info">
                 <span class="product-name">${p.nombre}</span><br>
-                <span style="font-size:0.85rem; color:#666;">Vendidos: ${p.vendidos}</span>
+                <span style="font-size:0.85rem; color:#666;">Disponibles: ${disponible}</span>
                 <span class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</span>
             </div>
             <div style="text-align:right">
                 <span class="stock-badge" style="background:${disponible <= 0 ? '#ff4d4d':'#2ecc71'}; color:white; padding:5px 10px; border-radius:15px; font-weight:bold;">
-                    ${disponible <= 0 ? 'AGOTADO' : disponible + ' disp.'}
+                    VENDER ➔
                 </span>
             </div>
         </li>`;
     }).join('');
 }
 
-// Auto-actualización al cambiar de pestaña
+// NUEVA FUNCIÓN: Salta directamente a la pestaña de ventas con el producto elegido
+function irAVenta(fila, nombre) {
+    switchTab('ventas');
+    document.getElementById('busqueda-venta').value = nombre;
+    filtrarSelectVentas(); // Filtra el select para que aparezca el producto
+    document.getElementById('select-producto').value = fila;
+}
+
 function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-    
     const sec = document.getElementById('sec-' + t);
     const btn = document.getElementById('tab-' + t);
-    
     if (sec && btn) {
         sec.style.display = 'block';
         btn.classList.add('active');
-        // Actualiza los datos automáticamente al entrar a cualquier pestaña
-        cargarDesdeDrive(); 
+        if (t !== 'ventas') cargarDesdeDrive(); 
     }
-    
     if(t === 'stats') setTimeout(dibujarGraficos, 300);
+}
+
+function calcularVentasTotales() {
+    const total = inventario.reduce((sum, p) => sum + ((parseFloat(p.precio) || 0) * (parseFloat(p.vendidos) || 0)), 0);
+    document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
 }
 
 function dibujarGraficos() {
@@ -161,6 +154,7 @@ async function registrarVenta() {
         document.getElementById('busqueda-venta').value = "";
         btn.disabled = false;
         cargarDesdeDrive();
+        switchTab('inventario'); // Regresa al inventario tras vender
     } catch (e) { alert("Error"); btn.disabled = false; }
 }
 
