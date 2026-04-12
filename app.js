@@ -1,14 +1,15 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6_7DQLfpxqg2JIe-EPulXmx5-Zw6PLFEhLQR-mA7Rwcr-lFoN71AdJdgZtAPsSUodXQ/exec"; 
 const CODIGO_PAIS = "57";
-// URL optimizada para evitar bloqueos directos
-const LOGO_ID = "1X12001K2W8G3_p8NRE2fGvWJ-4l7bYw-"; // ID extraído de tu error
-const LOGO_URL = `https://lh3.googleusercontent.com/d/${LOGO_ID}`;
+
+// ID del logo corregido y URL con Proxy para saltar el bloqueo CORS
+const LOGO_ID = "1X12001K2W8G3_p8NRE2fGvWJ-4l7bYw-";
+const LOGO_URL = `https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?container=focus&refresh=2592000&url=https://drive.google.com/uc?id=${LOGO_ID}`;
 
 let inventario = [];
 let historial = [];
 let charts = {};
 
-// Función auxiliar para cargar la imagen sin errores de CORS en el PDF
+// Función para convertir imagen a formato procesable sin errores de CORS
 async function getBase64Image(url) {
     try {
         const response = await fetch(url);
@@ -19,6 +20,7 @@ async function getBase64Image(url) {
             reader.readAsDataURL(blob);
         });
     } catch (e) {
+        console.error("Error al procesar logo:", e);
         return null;
     }
 }
@@ -78,10 +80,10 @@ function validarStockSeleccionado() {
     const disponible = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
     if (disponible <= 0 || cantidad > disponible) {
         btn.disabled = true; btn.classList.add('btn-disabled');
-        btn.innerText = disponible <= 0 ? "SIN STOCK" : "REBASA STOCK";
+        btn.innerText = disponible <= 0 ? "SIN STOCK" : "STOCK EXCEDIDO";
     } else {
         btn.disabled = false; btn.classList.remove('btn-disabled');
-        btn.innerText = "REGISTRAR VENTA Y FACTURA";
+        btn.innerText = "REGISTRAR VENTA Y PDF";
     }
 }
 
@@ -90,60 +92,61 @@ async function generarPDF(datos) {
     const doc = new jsPDF();
     const fecha = new Date().toLocaleDateString();
     
-    // Cargamos la imagen de forma segura antes de dibujar
-    const imgData = await getBase64Image(LOGO_URL);
+    // Obtener la imagen base64 de forma segura
+    const imgBase64 = await getBase64Image(LOGO_URL);
 
-    if (imgData) {
-        // Marca de Agua
-        doc.setGState(new doc.GState({ opacity: 0.1 }));
-        doc.addImage(imgData, 'PNG', 40, 80, 130, 130);
+    if (imgBase64) {
+        // Marca de agua central transparente
+        doc.setGState(new doc.GState({ opacity: 0.08 }));
+        doc.addImage(imgBase64, 'PNG', 45, 80, 120, 120);
         doc.setGState(new doc.GState({ opacity: 1.0 }));
-        
         // Logo superior
-        doc.addImage(imgData, 'PNG', 20, 10, 30, 30);
+        doc.addImage(imgBase64, 'PNG', 15, 10, 35, 35);
     }
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
-    doc.setTextColor(214, 51, 132); 
-    doc.text("AMARE BEAUTY", 190, 25, { align: "right" });
+    doc.setTextColor(214, 51, 132); // Rosa Amare
+    doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Factura No. " + Date.now().toString().slice(-6), 190, 32, { align: "right" });
+    doc.text("Factura de Venta No. " + Date.now().toString().slice(-6), 195, 32, { align: "right" });
     
     doc.setDrawColor(214, 51, 132);
-    doc.line(20, 45, 190, 45);
+    doc.line(15, 48, 195, 48);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0);
     doc.setFontSize(11);
-    doc.text(`Fecha: ${fecha}`, 20, 55);
-    doc.text(`Cliente: ${datos.cliente}`, 20, 62);
-    doc.text(`Método: ${datos.metodo}`, 20, 69);
+    doc.text(`Fecha: ${fecha}`, 15, 58);
+    doc.text(`Cliente: ${datos.cliente}`, 15, 65);
+    doc.text(`Método: ${datos.metodo}`, 15, 72);
 
     doc.setFillColor(245, 245, 245);
-    doc.rect(20, 80, 170, 10, 'F');
+    doc.rect(15, 85, 180, 10, 'F');
     doc.setFont("helvetica", "bold");
-    doc.text("Producto", 25, 87);
-    doc.text("Cant.", 120, 87);
-    doc.text("Total", 175, 87);
+    doc.text("Producto", 20, 92);
+    doc.text("Cant.", 130, 92);
+    doc.text("Total", 175, 92);
 
     doc.setFont("helvetica", "normal");
-    doc.text(datos.producto, 25, 100);
-    doc.text(datos.cantidad.toString(), 125, 100);
-    doc.text(`$${datos.total.toLocaleString()}`, 175, 100, { align: "right" });
+    doc.text(datos.producto, 20, 105);
+    doc.text(datos.cantidad.toString(), 135, 105);
+    doc.text(`$${datos.total.toLocaleString()}`, 175, 105, { align: "right" });
 
-    doc.line(20, 110, 190, 110);
+    doc.line(15, 115, 195, 115);
     doc.setFont("helvetica", "bold");
-    doc.text("TOTAL PAGADO:", 110, 125);
-    doc.text(`$${datos.total.toLocaleString('es-CO')}`, 190, 125, { align: "right" });
+    doc.setFontSize(14);
+    doc.text("TOTAL PAGADO:", 110, 130);
+    doc.text(`$${datos.total.toLocaleString('es-CO')}`, 195, 130, { align: "right" });
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "italic");
-    doc.text("¡Gracias por elegir Amare Beauty!", 105, 150, { align: "center" });
+    doc.setTextColor(150);
+    doc.text("¡Gracias por elegir Amare Beauty!", 105, 160, { align: "center" });
 
-    doc.save(`Factura_${datos.cliente}.pdf`);
+    doc.save(`Amare_Factura_${datos.cliente}.pdf`);
 }
 
 async function registrarVenta() {
@@ -170,14 +173,16 @@ async function registrarVenta() {
             })
         });
 
+        // Primero generamos el PDF (esto tarda un poco por la imagen)
         await generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
 
+        // Luego WhatsApp
         if (telFinal !== "N/A") {
             let msg = `¡Hola ${cliente}! ✨ Gracias por tu compra en Amare Beauty. ❤️`;
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        alert("Venta registrada con éxito.");
+        alert("Venta registrada y factura lista.");
         document.getElementById('busqueda-venta').value = "";
         btn.disabled = false;
         cargarDesdeDrive();
