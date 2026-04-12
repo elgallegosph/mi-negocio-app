@@ -1,36 +1,34 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-Oejr0Y3xXbcsdkbbJJp39zB-peV-75EPmseY8k0B8_TC-rIBDlMf2QHcbHkRv3yzBw/exec"; 
-const CODIGO_PAIS = "57";
+// REEMPLAZA ESTA URL CON LA TUYA REAL (Asegúrate que empiece con https://)
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5JcXxlAZgQdgVP9LFHF4laDz2hwhv1d53Fd0OXUby4vB0xZFvltUHtNJzA_-Ixcqk3A/exec"; 
 let inventario = [];
 let historial = [];
 let charts = {};
 
 async function cargarDesdeDrive() {
-    const syncBtn = document.getElementById('sync-btn');
-    if (syncBtn) syncBtn.innerText = "⏳";
     try {
+        // Corregido: URL limpia sin carácteres extra
         const res = await fetch(SCRIPT_URL + "?t=" + new Date().getTime());
         const data = await res.json();
         inventario = data.inventario || [];
         historial = data.historial || [];
         renderInventario();
-        calcularVentasTotales(); 
+        calcularVentasTotales();
         actualizarSelect();
-        if (syncBtn) syncBtn.innerText = "🔄";
-    } catch (e) { console.error(e); if (syncBtn) syncBtn.innerText = "❌"; }
+    } catch (e) { console.error("Error al cargar:", e); }
 }
 
 function calcularVentasTotales() {
-    let sumaReal = 0;
+    let suma = 0;
     inventario.forEach(p => {
-        const precio = parseFloat(p.precio) || 0;
-        const unidadesVendidas = parseFloat(p.vendidos) || 0;
-        if (precio > 0 && unidadesVendidas > 0) sumaReal += (precio * unidadesVendidas);
+        suma += (parseFloat(p.precio) || 0) * (parseFloat(p.vendidos) || 0);
     });
-    document.getElementById('gran-total-dinero').innerText = `$${sumaReal.toLocaleString('es-CO')}`;
+    document.getElementById('gran-total-dinero').innerText = `$${suma.toLocaleString('es-CO')}`;
 }
 
 function switchTab(t) {
+    // Ocultar todas las secciones
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
+    // Desactivar todos los botones
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     
     const sec = document.getElementById('sec-' + t);
@@ -39,62 +37,41 @@ function switchTab(t) {
     if (sec && btn) {
         sec.style.display = 'block';
         btn.classList.add('active');
-    }
-
-    // El secreto: Esperar a que el DOM se actualice antes de dibujar los gráficos
-    if(t === 'stats') {
-        setTimeout(dibujarGraficosFinal, 200);
+        // Si es la pestaña de estadísticas, redibujamos
+        if(t === 'stats') setTimeout(dibujarGraficos, 100);
     }
 }
 
-function dibujarGraficosFinal() {
-    const colorPrimario = '#d63384';
+function dibujarGraficos() {
+    const pink = '#d63384';
     
-    // 1. Gráfico Métodos (Dona)
+    // Gráfico de Métodos
     const ctxM = document.getElementById('canvasMetodos');
     if (ctxM) {
         if (charts.m) charts.m.destroy();
-        const metData = historial.reduce((a, c) => (a[c.metodo] = (a[c.metodo] || 0) + 1, a), {});
-        
+        const counts = historial.reduce((a, c) => (a[c.metodo] = (a[c.metodo] || 0) + 1, a), {});
         charts.m = new Chart(ctxM, {
             type: 'doughnut',
             data: {
-                labels: Object.keys(metData),
-                datasets: [{
-                    data: Object.values(metData),
-                    backgroundColor: [colorPrimario, '#6610f2', '#fd7e14', '#20c997', '#0dcaf0']
-                }]
+                labels: Object.keys(counts),
+                datasets: [{ data: Object.values(counts), backgroundColor: [pink, '#6610f2', '#fd7e14'] }]
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
-    // 2. Gráfico Top 5 (Horizontal)
+    // Gráfico Top 5
     const ctxP = document.getElementById('canvasTop5');
     if (ctxP) {
         if (charts.p) charts.p.destroy();
-        const top5 = [...inventario]
-            .sort((a, b) => (parseFloat(b.vendidos) || 0) - (parseFloat(a.vendidos) || 0))
-            .slice(0, 5);
-
+        const top5 = [...inventario].sort((a,b) => b.vendidos - a.vendidos).slice(0, 5);
         charts.p = new Chart(ctxP, {
             type: 'bar',
             data: {
-                labels: top5.map(p => p.nombre.substring(0, 15) + '..'),
-                datasets: [{
-                    label: 'Ventas',
-                    data: top5.map(p => parseFloat(p.vendidos) || 0),
-                    backgroundColor: colorPrimario,
-                    borderRadius: 5
-                }]
+                labels: top5.map(p => p.nombre.substring(0, 10)),
+                datasets: [{ label: 'Ventas', data: top5.map(p => p.vendidos), backgroundColor: pink }]
             },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { x: { beginAtZero: true } },
-                plugins: { legend: { display: false } }
-            }
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
         });
     }
 }
@@ -102,70 +79,16 @@ function dibujarGraficosFinal() {
 function renderInventario() {
     const lista = document.getElementById('lista-inventario');
     if (!lista) return;
-    lista.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<li>
-            <div style="flex-grow:1"><strong>${p.nombre}</strong><br><small>Vendidos: ${p.vendidos || 0}</small></div>
-            <div style="text-align:right">
-                <span class="stock-badge ${disp <= 0 ? 'bg-empty' : 'bg-ok'}">${disp <= 0 ? 'AGOTADO' : 'Cant: ' + disp}</span><br>
-                <strong>$${parseFloat(p.precio || 0).toLocaleString()}</strong>
-            </div>
-        </li>`;
-    }).join('');
-}
-
-async function registrarVenta() {
-    const select = document.getElementById('select-producto');
-    const fila = select.value;
-    const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
-    const cantidad = parseInt(document.getElementById('cant-venta').value);
-    const metodo = document.getElementById('metodo-pago').value;
-    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
-    let telInput = document.getElementById('tel-cliente').value.replace(/\s+/g, '');
-    const btn = document.querySelector('.btn-save');
-
-    const p = inventario.find(item => item.filaOriginal == fila);
-    const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-    if (disp < cantidad) return alert("¡Stock insuficiente!");
-
-    let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
-    btn.disabled = true;
-
-    try {
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify({
-                action: "venta", fila: parseInt(fila), productoNombre: nombreProd,
-                cantidad, metodo, cliente, telefono: telFinal
-            })
-        });
-
-        if (telFinal !== "N/A") {
-            let mensaje = `¡Hola ${cliente}! ✨ Muchas gracias por tu compra en Amare Beauty. ❤️`;
-            window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensaje)}`, '_blank');
-        }
-
-        alert("Venta registrada");
-        btn.disabled = false;
-        cargarDesdeDrive();
-    } catch (e) { alert("Error"); btn.disabled = false; }
-}
-
-function filtrarProductos() {
-    const txt = document.getElementById('busqueda').value.toLowerCase();
-    document.querySelectorAll('#lista-inventario li').forEach(li => {
-        li.style.display = li.textContent.toLowerCase().includes(txt) ? 'flex' : 'none';
-    });
+    lista.innerHTML = inventario.map(p => `
+        <li>
+            <span>${p.nombre}</span>
+            <strong>$${parseFloat(p.precio).toLocaleString()}</strong>
+        </li>`).join('');
 }
 
 function actualizarSelect() {
     const s = document.getElementById('select-producto');
-    if (!s) return;
-    s.innerHTML = inventario.map(p => {
-        const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<option value="${p.filaOriginal}">${p.nombre} (${disp} disp.)</option>`;
-    }).join('');
+    if (s) s.innerHTML = inventario.map(p => `<option value="${p.filaOriginal}">${p.nombre}</option>`).join('');
 }
 
 window.onload = cargarDesdeDrive;
