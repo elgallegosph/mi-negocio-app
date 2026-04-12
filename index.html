@@ -36,17 +36,19 @@
                 <div class="venta-form">
                     <label>Producto:</label><select id="select-producto"></select>
                     <label>Cantidad:</label><input type="number" id="cant-venta" value="1" min="1">
-                    <label>Método:</label>
+                    <label>Método de Pago:</label>
                     <select id="metodo-pago">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Transferencia">📱 Transferencia</option>
                         <option value="Separado">📦 Separado</option>
                         <option value="Fiado">📝 Fiado</option>
                     </select>
+
                     <div style="margin-top:10px; border-left: 3px solid #d63384; padding-left: 10px;">
-                        <label>Cliente:</label><input type="text" id="nombre-cliente">
+                        <label>Nombre Cliente:</label><input type="text" id="nombre-cliente">
                         <label>WhatsApp:</label><input type="tel" id="tel-cliente">
                     </div>
+                    
                     <button onclick="registrarVenta()" class="btn-save" style="margin-top:15px;">REGISTRAR VENTA</button>
                 </div>
             </section>
