@@ -13,13 +13,13 @@
         <header>
             <h1>Amare Beauty</h1>
             <div class="total-ventas-banner">
-                <small>VENTA TOTAL </small>
+                <small>VENTA REAL ACUMULADA</small>
                 <h2 id="gran-total-dinero">$0</h2>
             </div>
             <nav class="tabs">
                 <button onclick="switchTab('inventario')" id="tab-inventario" class="active">Inventario</button>
                 <button onclick="switchTab('ventas')" id="tab-ventas">Ventas</button>
-                <button onclick="switchTab('stats')" id="tab-stats">Reportes</button>
+                <button onclick="switchTab('stats')" id="tab-stats">Estadísticas</button>
             </nav>
         </header>
 
@@ -44,20 +44,20 @@
                         <option value="Fiado">📝 Fiado</option>
                     </select>
                     <div style="margin-top:10px; border-left: 3px solid #d63384; padding-left: 10px;">
-                        <label>Cliente:</label><input type="text" id="nombre-cliente" placeholder="Nombre">
-                        <label>WhatsApp:</label><input type="tel" id="tel-cliente" placeholder="300...">
+                        <label>Cliente:</label><input type="text" id="nombre-cliente">
+                        <label>WhatsApp:</label><input type="tel" id="tel-cliente">
                     </div>
                     <button onclick="registrarVenta()" class="btn-save" style="margin-top:15px;">REGISTRAR VENTA</button>
                 </div>
             </section>
 
             <section id="sec-stats" class="tab-content" style="display:none; padding: 15px;">
-                <div class="chart-container">
-                    <h3>💰 Métodos de Pago Preferidos</h3>
+                <div class="chart-box">
+                    <h3>Ventas por Método</h3>
                     <canvas id="chartMetodos"></canvas>
                 </div>
-                <div class="chart-container" style="margin-top: 30px;">
-                    <h3>🏆 Top 5 Productos (Más Vendidos)</h3>
+                <div class="chart-box" style="margin-top:20px;">
+                    <h3>Top 5 Productos más Vendidos</h3>
                     <canvas id="chartProductos"></canvas>
                 </div>
             </section>
