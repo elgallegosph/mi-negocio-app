@@ -7,6 +7,17 @@
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .price-tag { font-size: 1.4rem; color: #d63384; font-weight: 800; display: block; margin-top: 4px; }
+        .product-info { flex: 1; }
+        .product-name { font-size: 1.1rem; font-weight: 600; color: #333; }
+        .stock-info { font-size: 0.85rem; color: #666; }
+        .lista-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; border-bottom: 1px solid #eee; background: white;
+            margin-bottom: 8px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -29,7 +40,7 @@
                     <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()">
                     <button onclick="cargarDesdeDrive()" id="sync-btn">🔄</button>
                 </div>
-                <ul id="lista-inventario"></ul>
+                <ul id="lista-inventario" style="list-style: none; padding: 0;"></ul>
             </section>
 
             <section id="sec-ventas" class="tab-content" style="display:none;">
@@ -52,13 +63,13 @@
             </section>
 
             <section id="sec-stats" class="tab-content" style="display:none; padding: 15px;">
-                <div class="chart-card">
-                    <h3>📊 Métodos de Pago</h3>
+                <div class="chart-card" style="background:white; padding:15px; border-radius:12px; margin-bottom:20px;">
+                    <h3 style="text-align:center; color:#d63384;">📊 Métodos de Pago</h3>
                     <canvas id="canvasMetodos"></canvas>
                 </div>
-                <div class="chart-card" style="margin-top:25px;">
-                    <h3>🏆 Top 5 Productos</h3>
-                    <div style="height: 300px;"><canvas id="canvasTop5"></canvas></div>
+                <div class="chart-card" style="background:white; padding:15px; border-radius:12px;">
+                    <h3 style="text-align:center; color:#6610f2;">🏆 Top 5 Productos</h3>
+                    <div style="height: 250px;"><canvas id="canvasTop5"></canvas></div>
                 </div>
             </section>
         </main>
