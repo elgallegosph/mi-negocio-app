@@ -13,7 +13,9 @@
             display: flex; justify-content: space-between; align-items: center;
             padding: 15px; border-bottom: 1px solid #eee; background: white;
             margin-bottom: 8px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer; transition: background 0.2s;
         }
+        .lista-item:active { background: #fce4ec; }
         .chart-container { position: relative; height: 300px; width: 100%; }
         .search-sales { width: 100%; padding: 12px; margin-bottom: 8px; border: 2px solid #fce4ec; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
     </style>
@@ -44,7 +46,7 @@
 
             <section id="sec-ventas" class="tab-content" style="display:none;">
                 <div class="venta-form">
-                    <label>🔍 Buscar Producto:</label>
+                    <label>🔍 Producto Seleccionado:</label>
                     <input type="text" id="busqueda-venta" class="search-sales" placeholder="Escribe para buscar..." onkeyup="filtrarSelectVentas()">
                     <select id="select-producto" size="5" style="width:100%; margin-bottom:15px; border-radius:8px; border:1px solid #ddd;"></select>
                     
