@@ -12,7 +12,7 @@ function ocultarSplash() {
     const splash = document.getElementById('splash-screen');
     if (splash) {
         splash.style.opacity = '0';
-        setTimeout(() => splash.style.display = 'none', 1000);
+        setTimeout(() => splash.style.display = 'none', 800);
     }
 }
 
@@ -61,12 +61,12 @@ function renderInventario() {
         const agotado = disp <= 0;
         return `<li class="lista-item" onclick="${agotado ? "alert('Sin stock')" : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}">
             <div>
-                <span style="font-weight:bold; font-size:1.1rem;">${p.nombre}</span><br>
+                <span style="font-weight:bold;">${p.nombre}</span><br>
                 <small>Disponibles: ${disp}</small>
                 <div class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</div>
             </div>
-            <button style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:10px 20px; border-radius:12px; font-weight:bold;">
-                ${agotado ? 'AGOTADO' : 'VENDER'}
+            <button style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:8px 12px; border-radius:10px;">
+                ${agotado ? 'OFF' : 'VER'}
             </button>
         </li>`;
     }).join('');
@@ -77,12 +77,11 @@ function irAVenta(fila, nombre) {
     document.getElementById('busqueda-venta').value = nombre;
     filtrarSelectVentas();
     document.getElementById('select-producto').value = fila;
-    validarStockSeleccionado();
 }
 
 async function registrarVenta() {
     const select = document.getElementById('select-producto');
-    if (!select.value) return alert("Selecciona un producto");
+    if (!select.value) return alert("Selecciona producto");
     
     const fila = select.value;
     const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
