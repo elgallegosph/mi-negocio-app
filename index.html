@@ -64,7 +64,7 @@
                 <h3 style="margin-top:0; color:#d63384;">Nueva Venta</h3>
                 <div class="input-group">
                     <label>Producto</label>
-                    <input type="text" id="busqueda-venta" placeholder="Escribe para filtrar..." onkeyup="filtrarSelectVentas()" style="margin-bottom:8px;">
+                    <input type="text" id="busqueda-venta" placeholder="Filtrar por nombre..." onkeyup="filtrarSelectVentas()" style="margin-bottom:8px;">
                     <select id="select-producto" size="4"></select>
                 </div>
                 <div style="display:flex; gap:10px;">
@@ -73,7 +73,7 @@
                         <input type="number" id="cant-venta" value="1" min="1">
                     </div>
                     <div class="input-group" style="width:65%;">
-                        <label>Pago</label>
+                        <label>Método de Pago</label>
                         <select id="metodo-pago">
                             <option value="💵 Efectivo">Efectivo</option>
                             <option value="📲 Transferencia">Transferencia</option>
@@ -83,9 +83,9 @@
                     </div>
                 </div>
                 <div class="input-group">
-                    <label>Cliente</label>
-                    <input type="text" id="nombre-cliente" placeholder="Nombre" style="margin-bottom:10px;">
-                    <input type="tel" id="tel-cliente" placeholder="WhatsApp">
+                    <label>Datos del Cliente</label>
+                    <input type="text" id="nombre-cliente" placeholder="Nombre completo" style="margin-bottom:10px;">
+                    <input type="tel" id="tel-cliente" placeholder="WhatsApp (Ej: 300...)">
                 </div>
                 <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:15px; font-weight:bold; font-size:1.1rem; cursor:pointer;">REGISTRAR VENTA</button>
             </div>
@@ -93,7 +93,7 @@
 
         <section id="sec-stats" class="tab-content" style="display:none;">
             <div class="card">
-                <h3 style="text-align:center; color:#2c3e50;">Métodos de Venta (Real)</h3>
+                <h3 style="text-align:center; color:#2c3e50;">Estadísticas de Pago</h3>
                 <div style="height: 300px; display: flex; justify-content: center;">
                     <canvas id="canvasMetodos"></canvas>
                 </div>
