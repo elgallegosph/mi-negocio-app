@@ -184,7 +184,7 @@ function filtrarProductos() {
 function marketingMasivo() {
     if (clientes.length === 0) return alert("Sin clientes registrados.");
     clientes.forEach((c, i) => setTimeout(() => {
-        const msj = `¡Hola ${c.nombre}! ✨ Te enviamos nuestro catálogo de *Amare Beauty*: https://drive.google.com/open?id=1rU759f0_bJVyNa_AM-shqBVrImPWHsOC`;
+        const msj = `¡Hola ${c.nombre}! ✨ Te enviamos nuestro catálogo de *Amare Beauty*: https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing`;
         window.open(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`, '_blank');
     }, i * 2000));
 }
