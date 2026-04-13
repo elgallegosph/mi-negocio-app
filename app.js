@@ -1,7 +1,7 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyx-Qo1aSC6EyYnFJfVqJUUL27nTOA2OIilTPFm2wyKwNwpO3ZY-hzXdsUWcM_3OIoeCw/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; // Ruta local para evitar bloqueos CORS
-const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=drive_link"; 
+const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
 
 let inventario = [];
 let historial = [];
