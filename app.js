@@ -1,15 +1,42 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx_4mIHlRggmk4RwOZvIrHjCRpNJob2803-g10cN-K267ByugUj_OZUOySc5REiCWIJ/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJj-TZm_9__ZOWz_zQvi_ojC71mxAbjW_qBbn__9tpCTHIw8jG0AEqq6QKDSfCV0EFMg/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
-const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
+const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=drive_link"; 
 
 let inventario = [];
 let historial = [];
+let listaClientes = []; // Nueva lista para marketing
 let charts = {};
 
-// Nueva función para marketing
 function verCatalogo() {
     window.open(URL_CATALOGO, '_blank');
+}
+
+// Función para Marketing Masivo
+async function enviarMarketingMasivo() {
+    if (listaClientes.length === 0) {
+        alert("No hay clientes registrados con teléfono todavía.");
+        return;
+    }
+
+    const confirmacion = confirm(`¿Quieres abrir los chats para enviar el catálogo a ${listaClientes.length} clientes?`);
+    if (!confirmacion) return;
+
+    const status = document.getElementById('status-marketing');
+    status.innerText = "Abriendo chats...";
+
+    for (let i = 0; i < listaClientes.length; i++) {
+        const c = listaClientes[i];
+        const mensaje = encodeURIComponent(`¡Hola ${c.nombre}! ✨ Te compartimos nuestro catálogo actualizado de Amare Beauty con muchas novedades para ti: ${URL_CATALOGO}`);
+        
+        // Abrir cada chat en una pestaña nueva
+        window.open(`https://wa.me/${c.tel}?text=${mensaje}`, '_blank');
+        
+        // Pequeña pausa para no saturar el navegador
+        await new Promise(r => setTimeout(r, 800));
+    }
+    
+    status.innerText = "✅ Chats abiertos con éxito.";
 }
 
 async function getBase64Image(url) {
@@ -36,6 +63,7 @@ async function cargarDesdeDrive() {
         const data = await response.json();
         inventario = data.inventario || [];
         historial = data.historial || [];
+        listaClientes = data.clientes || []; // Cargar lista de clientes
         renderInventario();
         calcularVentasTotales(); 
         actualizarSelect();
@@ -188,7 +216,7 @@ function switchTab(t) {
     if (sec && btn) {
         sec.style.display = 'block';
         btn.classList.add('active');
-        if (t === 'inventario' || t === 'stats') cargarDesdeDrive(); 
+        if (t === 'inventario' || t === 'stats' || t === 'catalogo') cargarDesdeDrive(); 
     }
     if(t === 'stats') setTimeout(dibujarGraficos, 300);
 }
