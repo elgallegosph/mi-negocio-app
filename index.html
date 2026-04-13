@@ -18,11 +18,7 @@
         }
 
         header { background: #2c3e50; color: white; padding: 15px; text-align: center; border-radius: 0 0 25px 25px; }
-        
-        .banner-total { 
-            background: linear-gradient(45deg, #d63384, #e83e8c); 
-            padding: 15px; border-radius: 15px; margin: 10px auto; width: 85%; 
-        }
+        .banner-total { background: #d63384; padding: 15px; border-radius: 15px; margin: 10px auto; width: 85%; }
 
         .tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
         .tabs button { 
@@ -31,33 +27,23 @@
         }
         .tabs button.active { background: #d63384 !important; }
 
-        .card { 
-            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px);
-            border-radius: 20px; padding: 20px; margin-bottom: 15px;
-        }
+        .tab-content { padding: 15px; }
+        .card { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; margin-bottom: 15px; }
         
         .lista-item { 
             background: rgba(255, 255, 255, 0.8); border-radius: 15px; padding: 15px; 
             margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
         }
 
-        /* Animación de Carga */
-        .btn-sync { 
-            background: #d63384; color: white; border: none; padding: 10px; 
-            border-radius: 50%; cursor: pointer; width: 45px; height: 45px;
-            display: flex; align-items: center; justify-content: center;
-            transition: transform 0.3s;
-        }
-        
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        .btn-sync { background: #d63384; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; width: 45px; height: 45px; }
         .loading { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .price-tag { color: #d63384; font-weight: 800; font-size: 1.2rem; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
         
+        .sin-stock { opacity: 0.6; filter: grayscale(1); }
+
         #splash-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff0f5; display: flex; flex-direction: column;
@@ -72,7 +58,7 @@
     </div>
 
     <header>
-        <h1 style="margin:0;">Amare Beauty</h1>
+        <h1>Amare Beauty</h1>
         <div class="banner-total">
             <small>VENTA TOTAL REAL</small>
             <h2 id="gran-total-dinero" style="margin:5px 0;">$0</h2>
@@ -85,10 +71,10 @@
         </nav>
     </header>
 
-    <main style="padding: 15px;">
+    <main>
         <section id="sec-inventario" class="tab-content">
             <div style="display:flex; gap:10px; align-items: center; margin-bottom:15px;">
-                <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()" style="margin:0;">
+                <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrarProductos()">
                 <button onclick="cargarDesdeDrive()" class="btn-sync" id="btn-sync-icon">🔄</button>
             </div>
             <div id="lista-inventario"></div>
@@ -96,7 +82,7 @@
 
         <section id="sec-ventas" class="tab-content" style="display:none;">
             <div class="card">
-                <input type="text" id="busqueda-venta" placeholder="Escribir producto..." onkeyup="filtrarSelectVentas()">
+                <input type="text" id="busqueda-venta" placeholder="Buscar producto..." onkeyup="filtrarSelectVentas()">
                 <select id="select-producto" size="4"></select>
                 <div style="display:flex; gap:10px;">
                     <input type="number" id="cant-venta" value="1" min="1">
@@ -115,15 +101,17 @@
 
         <section id="sec-stats" class="tab-content" style="display:none;">
             <div class="card">
-                <h3 style="text-align:center;">Métodos de Pago</h3>
                 <canvas id="canvasMetodos"></canvas>
+            </div>
+            <div class="card">
+                <h3>Clientes Registrados</h3>
+                <div id="lista-clientes-marketing" style="max-height: 200px; overflow-y: auto;"></div>
             </div>
         </section>
 
         <section id="sec-catalogo" class="tab-content" style="display:none;">
             <div class="card" style="text-align:center;">
                 <button onclick="verCatalogo()" style="width:100%; padding:15px; background:#6610f2; color:white; border:none; border-radius:10px; margin-bottom:15px;">VER CATÁLOGO</button>
-                <button onclick="enviarMarketingMasivo()" style="width:100%; padding:15px; background:#25d366; color:white; border:none; border-radius:10px;">COMPARTIR Y REGISTRAR</button>
             </div>
         </section>
     </main>
