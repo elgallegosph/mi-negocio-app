@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* FONDO ROSA CLARO */
+        /* FONDO Y MARCA DE AGUA GIGANTE */
         body {
             background-color: #fff0f5 !important; 
             margin: 0;
@@ -16,123 +16,138 @@
             min-height: 100vh;
         }
 
-        /* MARCA DE AGUA MÁS GRANDE */
         body::before {
             content: ""; 
             position: fixed; 
-            top: 50%; 
-            left: 50%;
-            width: 95%; /* Aumentado de 80% a 95% */
-            height: 95%; 
-            max-width: 800px; /* Aumentado el tope máximo */
+            top: 50%; left: 50%;
+            width: 95%; height: 95%; max-width: 800px;
             background: url('./logo.png') no-repeat center;
             background-size: contain; 
             transform: translate(-50%, -50%);
-            opacity: 0.18; /* Ligeramente más visible */
+            opacity: 0.18;
             z-index: -1; 
             pointer-events: none;
         }
 
-        /* Splash Screen */
+        /* CORRECCIÓN DE BOTONES DE SECCIONES */
+        .tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 15px;
+            margin-top: 10px;
+        }
+
+        .tabs button {
+            padding: 12px 5px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 10px;
+            border: 1px solid rgba(214, 51, 132, 0.2);
+            background: rgba(255, 255, 255, 0.8);
+            color: #d63384;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .tabs button.active {
+            background: #d63384 !important;
+            color: white !important;
+        }
+
+        /* TRANSPARENCIAS PARA VER EL LOGO */
+        .tab-content { background: transparent !important; margin-top: 20px; }
+        
+        .lista-item { 
+            background: rgba(255, 255, 255, 0.45) !important;
+            backdrop-filter: blur(4px);
+            padding: 15px; margin-bottom: 10px; border-radius: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+        
+        .venta-form, .chart-card, .catalog-card {
+            background: rgba(255, 255, 255, 0.6) !important;
+            backdrop-filter: blur(8px);
+            padding: 20px; border-radius: 20px;
+        }
+
         #splash-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff0f5; display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 9999;
-            transition: opacity 1s ease;
-        }
-        #splash-screen img { width: 250px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        /* LISTA Y TARJETAS TRANSPARENTES */
-        .tab-content { background: transparent !important; }
-        
-        .lista-item { 
-            background: rgba(255, 255, 255, 0.4) !important; /* Muy transparente */
-            backdrop-filter: blur(3px); /* Difuminado sutil */
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 18px; border-bottom: 1px solid rgba(214, 51, 132, 0.1); 
-            margin-bottom: 12px; border-radius: 18px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        }
-        
-        .venta-form, .chart-card, .catalog-card {
-            background: rgba(255, 255, 255, 0.55) !important; /* Transparencia para formularios */
-            backdrop-filter: blur(8px);
-            padding: 25px; border-radius: 20px; box-shadow: 0 8px 32px rgba(214, 51, 132, 0.05);
         }
 
-        header { background: rgba(255, 255, 255, 0.6) !important; backdrop-filter: blur(10px); }
-        .price-tag { font-size: 1.4rem; color: #d63384; font-weight: 800; }
-        .btn-disabled { background: #ccc !important; cursor: not-allowed !important; }
+        header { background: rgba(255, 255, 255, 0.5); padding: 15px; border-radius: 0 0 20px 20px; }
+        .price-tag { font-size: 1.3rem; color: #d63384; font-weight: 800; }
     </style>
 </head>
 <body>
     <div id="splash-screen">
-        <img src="./logo.png" alt="Amare Beauty">
-        <h1 style="color: #d63384; margin-top: 20px;">Amare Beauty</h1>
+        <img src="./logo.png" alt="Logo" style="width:200px;">
+        <h1 style="color: #d63384;">Amare Beauty</h1>
     </div>
 
     <div class="app-container">
         <header>
-            <h1>Amare Beauty</h1>
-            <div class="total-ventas-banner">
-                <small>VENTA TOTAL REAL</small>
-                <h2 id="gran-total-dinero">$0</h2>
+            <h1 style="text-align:center; color:#d63384; margin:0;">Amare Beauty</h1>
+            <div class="total-ventas-banner" style="text-align:center; margin-top:10px;">
+                <small>VENTA TOTAL</small>
+                <h2 id="gran-total-dinero" style="margin:0;">$0</h2>
             </div>
             <nav class="tabs">
-                <button onclick="switchTab('inventario')" id="tab-inventario" class="active">Inventario</button>
-                <button onclick="switchTab('ventas')" id="tab-ventas">Ventas</button>
-                <button onclick="switchTab('stats')" id="tab-stats">Estadísticas</button>
+                <button onclick="switchTab('inventario')" id="tab-inventario" class="active">📦 Inventario</button>
+                <button onclick="switchTab('ventas')" id="tab-ventas">💰 Ventas</button>
+                <button onclick="switchTab('stats')" id="tab-stats">📊 Reportes</button>
                 <button onclick="switchTab('catalogo')" id="tab-catalogo">📖 Catálogo</button>
             </nav>
         </header>
 
-        <main>
+        <main style="padding: 10px;">
             <section id="sec-inventario" class="tab-content">
-                <div class="search-bar">
-                    <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()">
-                    <button onclick="cargarDesdeDrive()" id="sync-btn">🔄</button>
+                <div class="search-bar" style="display:flex; gap:5px; margin-bottom:15px;">
+                    <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrarProductos()" style="flex:1; padding:10px; border-radius:10px; border:1px solid #ddd;">
+                    <button onclick="cargarDesdeDrive()" id="sync-btn" style="padding:10px; border-radius:10px; background:#d63384; color:white; border:none;">🔄</button>
                 </div>
                 <ul id="lista-inventario" style="list-style: none; padding: 0;"></ul>
             </section>
 
             <section id="sec-ventas" class="tab-content" style="display:none;">
                 <div class="venta-form">
-                    <h3 style="color:#d63384;">Nueva Venta</h3>
-                    <input type="text" id="busqueda-venta" class="search-sales" placeholder="Buscar producto..." onkeyup="filtrarSelectVentas()">
-                    <select id="select-producto" size="5" style="width:100%; border-radius:12px; margin-bottom:15px;" onchange="validarStockSeleccionado()"></select>
+                    <h3 style="margin-top:0; color:#d63384;">Registrar Venta</h3>
+                    <input type="text" id="busqueda-venta" placeholder="Buscar para vender..." onkeyup="filtrarSelectVentas()" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
+                    <select id="select-producto" size="4" style="width:100%; border-radius:10px; margin-bottom:15px;" onchange="validarStockSeleccionado()"></select>
                     
-                    <label>Cantidad:</label><input type="number" id="cant-venta" value="1" min="1" oninput="validarStockSeleccionado()">
-                    <label>Método:</label>
-                    <select id="metodo-pago">
-                        <option value="Efectivo">💵 Efectivo</option>
-                        <option value="Transferencia">📱 Transferencia</option>
-                        <option value="Separado">📦 Separado</option>
-                        <option value="Fiado">📝 Fiado</option>
-                    </select>
-                    
-                    <div style="margin-top:20px;">
-                        <input type="text" id="nombre-cliente" placeholder="Nombre">
-                        <input type="tel" id="tel-cliente" placeholder="300...">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div><label>Cant:</label><input type="number" id="cant-venta" value="1" min="1" style="width:100%;" oninput="validarStockSeleccionado()"></div>
+                        <div><label>Pago:</label>
+                            <select id="metodo-pago" style="width:100%;">
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia">Transf.</option>
+                                <option value="Separado">Separado</option>
+                                <option value="Fiado">Fiado</option>
+                            </select>
+                        </div>
                     </div>
-                    <button id="btn-registrar-final" onclick="registrarVenta()" class="btn-save" style="margin-top:20px;">REGISTRAR Y PDF</button>
+                    <input type="text" id="nombre-cliente" placeholder="Nombre cliente" style="width:100%; margin-top:10px;">
+                    <input type="tel" id="tel-cliente" placeholder="WhatsApp" style="width:100%; margin-top:10px;">
+                    <button id="btn-registrar-final" onclick="registrarVenta()" class="btn-save" style="margin-top:20px; width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:10px; font-weight:bold;">REGISTRAR Y PDF</button>
                 </div>
             </section>
 
-            <section id="sec-stats" class="tab-content" style="display:none; padding: 15px;">
+            <section id="sec-stats" class="tab-content" style="display:none;">
                 <div class="chart-card">
-                    <h3 style="text-align:center; color:#d63384;">📊 Métodos de Pago</h3>
-                    <div style="height: 300px;"><canvas id="canvasMetodos"></canvas></div>
+                    <h3 style="text-align:center; color:#d63384;">Resumen</h3>
+                    <div style="height: 250px;"><canvas id="canvasMetodos"></canvas></div>
                 </div>
             </section>
 
-            <section id="sec-catalogo" class="tab-content" style="display:none; padding: 20px;">
+            <section id="sec-catalogo" class="tab-content" style="display:none;">
                 <div class="catalog-card" style="text-align:center;">
-                    <h2 style="color: #d63384;">Catálogo Amare</h2>
-                    <button onclick="verCatalogo()" class="btn-save" style="background: #6610f2;">VER PDF</button>
-                    <div style="margin-top: 30px;">
-                        <button onclick="enviarMarketingMasivo()" class="btn-save" style="background: #25d366;">ENVIAR POR WHATSAPP</button>
-                    </div>
+                    <button onclick="verCatalogo()" class="btn-save" style="background: #6610f2; width:100%; padding:15px; margin-bottom:15px; color:white; border:none; border-radius:10px;">VER CATÁLOGO PDF</button>
+                    <button onclick="enviarMarketingMasivo()" class="btn-save" style="background: #25d366; width:100%; padding:15px; color:white; border:none; border-radius:10px;">ENVIAR A CLIENTES</button>
                 </div>
             </section>
         </main>
