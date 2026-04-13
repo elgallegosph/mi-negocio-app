@@ -4,110 +4,118 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amare Beauty - Dashboard</title>
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { background-color: #fff0f5 !important; margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
-
+        body { background-color: #fff0f5; margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+        
+        /* Marca de agua gigante corregida */
         body::before {
             content: ""; position: fixed; top: 50%; left: 50%;
-            width: 95%; height: 95%; max-width: 800px;
+            width: 90%; height: 90%; max-width: 700px;
             background: url('./logo.png') no-repeat center;
             background-size: contain; transform: translate(-50%, -50%);
-            opacity: 0.18; z-index: -1; pointer-events: none;
+            opacity: 0.12; z-index: -1; pointer-events: none;
         }
 
-        .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
-        .tabs button {
-            padding: 12px; font-weight: bold; border-radius: 12px;
-            border: 1px solid rgba(214, 51, 132, 0.2); background: rgba(255, 255, 255, 0.7);
-            color: #d63384; cursor: pointer;
+        header { background: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 0 0 25px 25px; }
+        .banner-total { background: #d63384; padding: 15px; border-radius: 15px; margin: 10px 0; display: inline-block; width: 80%; }
+        
+        .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 10px; }
+        .tabs button { 
+            padding: 10px 5px; border-radius: 10px; border: none; font-weight: bold;
+            background: #4a627a; color: white; cursor: pointer; font-size: 0.8rem;
         }
-        .tabs button.active { background: #d63384 !important; color: white !important; }
+        .tabs button.active { background: #fff !important; color: #2c3e50 !important; }
 
-        .tab-content { background: transparent !important; }
-        .lista-item { 
-            background: rgba(255, 255, 255, 0.4) !important;
-            backdrop-filter: blur(4px); padding: 15px; margin-bottom: 10px;
-            border-radius: 15px; display: flex; justify-content: space-between; align-items: center;
+        .tab-content { padding: 15px; }
+        .card { 
+            background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px);
+            border-radius: 20px; padding: 15px; margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
         
-        .venta-form, .chart-card, .catalog-card {
-            background: rgba(255, 255, 255, 0.55) !important;
-            backdrop-filter: blur(8px); padding: 20px; border-radius: 20px;
+        .lista-item { 
+            background: white; border-radius: 15px; padding: 15px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-left: 5px solid #d63384;
         }
 
+        .btn-vender { background: #2ecc71; color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
+        
         #splash-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff0f5; display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 9999;
         }
-
-        header { background: rgba(255, 255, 255, 0.5); padding: 15px; text-align: center; }
-        .price-tag { font-size: 1.3rem; color: #d63384; font-weight: 800; }
-        input, select { padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div id="splash-screen">
-        <img src="./logo.png" alt="Logo" style="width:200px;">
-        <h1 style="color: #d63384;">Amare Beauty</h1>
+        <img src="./logo.png" alt="Logo" style="width:180px;">
+        <h2 style="color: #d63384;">Amare Beauty</h2>
     </div>
 
-    <div class="app-container">
-        <header>
-            <h1 style="color:#d63384; margin:0;">Amare Beauty</h1>
-            <h2 id="gran-total-dinero" style="margin:10px 0;">$0</h2>
-            <nav class="tabs">
-                <button onclick="switchTab('inventario')" id="tab-inventario" class="active">📦 Inventario</button>
-                <button onclick="switchTab('ventas')" id="tab-ventas">💰 Ventas</button>
-                <button onclick="switchTab('stats')" id="tab-stats">📊 Reportes</button>
-                <button onclick="switchTab('catalogo')" id="tab-catalogo">📖 Catálogo</button>
-            </nav>
-        </header>
+    <header>
+        <h1>Amare Beauty</h1>
+        <div class="banner-total">
+            <small>VENTA TOTAL REAL</small>
+            <h2 id="gran-total-dinero" style="margin:5px 0;">$0</h2>
+        </div>
+        <nav class="tabs">
+            <button onclick="switchTab('inventario')" id="tab-inventario" class="active">Inventario</button>
+            <button onclick="switchTab('ventas')" id="tab-ventas">Ventas</button>
+            <button onclick="switchTab('stats')" id="tab-stats">Estadísticas</button>
+            <button onclick="switchTab('catalogo')" id="tab-catalogo">Catálogo</button>
+        </nav>
+    </header>
 
-        <main style="padding: 10px;">
-            <section id="sec-inventario" class="tab-content">
-                <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrarProductos()" style="width:80%;">
-                <button onclick="cargarDesdeDrive()">🔄</button>
-                <ul id="lista-inventario" style="list-style: none; padding: 0;"></ul>
-            </section>
+    <main>
+        <section id="sec-inventario" class="tab-content">
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()">
+                <button onclick="cargarDesdeDrive()" style="border-radius:10px; border:none; padding:10px;">🔄</button>
+            </div>
+            <div id="lista-inventario"></div>
+        </section>
 
-            <section id="sec-ventas" class="tab-content" style="display:none;">
-                <div class="venta-form">
-                    <input type="text" id="busqueda-venta" placeholder="Escribe para filtrar productos..." onkeyup="filtrarSelectVentas()" style="width:100%;">
-                    <select id="select-producto" size="5" style="width:100%;"></select>
-                    
-                    <div style="display:flex; gap:10px;">
-                        <input type="number" id="cant-venta" value="1" min="1" style="width:50%;">
-                        <select id="metodo-pago" style="width:50%;">
-                            <option value="Efectivo">Efectivo</option>
-                            <option value="Transferencia">Transferencia</option>
-                            <option value="Separado">Separado</option>
-                            <option value="Fiado">Fiado</option>
-                        </select>
-                    </div>
-                    <input type="text" id="nombre-cliente" placeholder="Nombre del cliente" style="width:100%;">
-                    <input type="tel" id="tel-cliente" placeholder="WhatsApp (ej: 3001234567)" style="width:100%;">
-                    <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:10px; font-weight:bold;">REGISTRAR VENTA Y WHATSAPP</button>
+        <section id="sec-ventas" class="tab-content" style="display:none;">
+            <div class="card">
+                <h3 style="color:#d63384;">Nueva Venta</h3>
+                <input type="text" id="busqueda-venta" placeholder="Escribe para buscar..." onkeyup="filtrarSelectVentas()">
+                <select id="select-producto" size="5"></select>
+                
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="cant-venta" value="1" min="1">
+                    <select id="metodo-pago">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Separado">Separado</option>
+                        <option value="Fiado">Fiado</option>
+                    </select>
                 </div>
-            </section>
+                <input type="text" id="nombre-cliente" placeholder="Nombre del cliente">
+                <input type="tel" id="tel-cliente" placeholder="Celular (WhatsApp)">
+                <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:12px; font-weight:bold; margin-top:10px;">REGISTRAR Y ENVIAR</button>
+            </div>
+        </section>
 
-            <section id="sec-stats" class="tab-content" style="display:none;">
-                <div class="chart-card">
-                    <canvas id="canvasMetodos"></canvas>
-                </div>
-            </section>
+        <section id="sec-stats" class="tab-content" style="display:none;">
+            <div class="card">
+                <h3 style="text-align:center;">Métodos de Pago</h3>
+                <div style="height: 300px;"><canvas id="canvasMetodos"></canvas></div>
+            </div>
+        </section>
 
-            <section id="sec-catalogo" class="tab-content" style="display:none;">
-                <div class="catalog-card">
-                    <button onclick="verCatalogo()" style="width:100%; margin-bottom:10px;">VER PDF</button>
-                    <button onclick="enviarMarketingMasivo()" style="width:100%; background:#25d366; color:white;">ENVIAR CATÁLOGO WHATSAPP</button>
-                </div>
-            </section>
-        </main>
-    </div>
+        <section id="sec-catalogo" class="tab-content" style="display:none;">
+            <div class="card" style="text-align:center;">
+                <button onclick="verCatalogo()" style="width:100%; padding:15px; background:#6610f2; color:white; border:none; border-radius:10px; margin-bottom:10px;">VER CATÁLOGO PDF</button>
+                <button onclick="enviarMarketingMasivo()" style="width:100%; padding:15px; background:#25d366; color:white; border:none; border-radius:10px;">ENVIAR CATÁLOGO WHATSAPP</button>
+            </div>
+        </section>
+    </main>
+
     <script src="app.js"></script>
 </body>
 </html>
