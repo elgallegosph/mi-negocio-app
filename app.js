@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnVMLI-8WTrWEDyiSvsaNXsuAWsKSwpXBGGAWrjbBAvUHV3YOjKZsG8QYczeDuZAVwZA/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzG4Yhneh_gNNrvdsOdPXW9vXuapez3DMRZfOedmUji44g-T5aix8wHxwaNvxwuqc4I/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
 const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
