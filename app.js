@@ -1,6 +1,6 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzvIIK4wdcorlYlciZbCrBwVRaLyk--M8C0_LtjBhaD35TwGD-BKXSedQ5UyWkzdtkxQ/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyx-Qo1aSC6EyYnFJfVqJUUL27nTOA2OIilTPFm2wyKwNwpO3ZY-hzXdsUWcM_3OIoeCw/exec"; 
 const CODIGO_PAIS = "57";
-const LOGO_URL = "./logo.png"; 
+const LOGO_URL = "./logo.png"; // Ruta local para evitar bloqueos CORS
 const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=drive_link"; 
 
 let inventario = [];
@@ -23,24 +23,28 @@ async function cargarDesdeDrive() {
         historial = data.historial || [];
         renderInventario();
         calcularVentasTotales(); 
-        filtrarSelectVentas();
+        filtrarSelectVentas(); // Reemplaza a actualizarSelect
         ocultarSplash();
-    } catch (e) { console.error(e); ocultarSplash(); }
+    } catch (e) { 
+        console.error("Error cargando datos:", e); 
+        ocultarSplash(); 
+    }
 }
 
 function renderInventario() {
-    const lista = document.getElementById('lista-inventario');
-    if (!lista) return;
-    lista.innerHTML = inventario.map(p => {
+    const contenedor = document.getElementById('lista-inventario');
+    contenedor.innerHTML = inventario.map(p => {
         const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        return `<li class="lista-item" onclick="irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')">
-            <div>
-                <span style="font-weight:bold;">${p.nombre}</span><br>
-                <small>Disp: ${disp}</small>
-                <div class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</div>
+        return `
+            <div class="lista-item">
+                <div>
+                    <strong>${p.nombre}</strong><br>
+                    <small>Disponibles: ${disp}</small><br>
+                    <span style="color:#d63384; font-weight:bold;">$${parseFloat(p.precio).toLocaleString()}</span>
+                </div>
+                <button class="btn-vender" onclick="irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')">VENDER</button>
             </div>
-            <button style="background:#d63384; color:white; border:none; padding:8px; border-radius:8px;">VENDER</button>
-        </li>`;
+        `;
     }).join('');
 }
 
@@ -51,92 +55,64 @@ function irAVenta(fila, nombre) {
     document.getElementById('select-producto').value = fila;
 }
 
-async function registrarVenta() {
-    const select = document.getElementById('select-producto');
-    const fila = select.value;
-    if (!fila) return alert("Por favor, selecciona un producto de la lista.");
-
-    // CORRECCIÓN: Obtener datos reales del objeto inventario
-    const p = inventario.find(item => item.filaOriginal == fila);
-    const nombreProd = p.nombre;
-    const precioProd = parseFloat(p.precio);
-    
-    const cantidad = parseInt(document.getElementById('cant-venta').value);
-    const metodo = document.getElementById('metodo-pago').value;
-    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
-    let tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
-    
-    const totalVenta = precioProd * cantidad;
-
-    try {
-        // 1. Enviar a Google Sheets
-        await fetch(SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors',
-            body: JSON.stringify({ 
-                action: "venta", 
-                fila: parseInt(fila), 
-                productoNombre: nombreProd, 
-                cantidad: cantidad, 
-                metodo: metodo, 
-                cliente: cliente, 
-                telefono: tel 
-            })
-        });
-
-        // 2. Generar Factura PDF (Pasamos los datos corregidos)
-        await generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
-
-        // 3. Enviar WhatsApp
-        if (tel.length >= 10) {
-            const mensaje = encodeURIComponent(`¡Hola ${cliente}! ✨ Gracias por elegir Amare Beauty. ❤️\n\n🛍️ *Compra:* ${nombreProd}\n🔢 *Cantidad:* ${cantidad}\n💰 *Total:* $${totalVenta.toLocaleString('es-CO')}\n💳 *Método:* ${metodo}\n\nTu pedido ha sido registrado con éxito. ¡Vuelve pronto!`);
-            window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${mensaje}`, '_blank');
-        }
-
-        alert("¡Venta registrada con éxito!");
-        cargarDesdeDrive();
-        switchTab('inventario');
-    } catch (e) { alert("Error al procesar la venta."); }
-}
-
-async function generarPDF(datos) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    // Encabezado
-    doc.setTextColor(214, 51, 132);
-    doc.setFontSize(22);
-    doc.text("AMARE BEAUTY", 105, 20, { align: "center" });
-    
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 40);
-    doc.text(`Cliente: ${datos.cliente}`, 20, 50);
-    
-    doc.line(20, 55, 190, 55);
-    
-    // Detalle
-    doc.text("Producto", 20, 65);
-    doc.text("Cant.", 120, 65);
-    doc.text("Total", 160, 65);
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(datos.producto, 20, 75);
-    doc.text(datos.cantidad.toString(), 120, 75);
-    doc.text(`$${datos.total.toLocaleString('es-CO')}`, 160, 75);
-    
-    doc.line(20, 80, 190, 80);
-    doc.text(`Método de Pago: ${datos.metodo}`, 20, 90);
-    
-    doc.save(`Factura_${datos.cliente}.pdf`);
-}
-
 function filtrarSelectVentas() {
     const txt = document.getElementById('busqueda-venta').value.toLowerCase();
     const select = document.getElementById('select-producto');
     select.innerHTML = inventario
         .filter(p => p.nombre.toLowerCase().includes(txt))
-        .map(p => `<option value="${p.filaOriginal}">${p.nombre} - $${parseFloat(p.precio).toLocaleString()}</option>`)
+        .map(p => `<option value="${p.filaOriginal}">${p.nombre} ($${parseFloat(p.precio).toLocaleString()})</option>`)
         .join('');
+}
+
+async function registrarVenta() {
+    const select = document.getElementById('select-producto');
+    const fila = select.value;
+    if (!fila) return alert("Selecciona un producto");
+
+    const p = inventario.find(item => item.filaOriginal == fila);
+    const cantidad = parseInt(document.getElementById('cant-venta').value);
+    const metodo = document.getElementById('metodo-pago').value;
+    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
+    let tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
+    
+    const totalVenta = parseFloat(p.precio) * cantidad;
+
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors',
+            body: JSON.stringify({ 
+                action: "venta", fila: parseInt(fila), 
+                productoNombre: p.nombre, cantidad, metodo, cliente, telefono: tel 
+            })
+        });
+
+        // WhatsApp
+        if (tel.length >= 10) {
+            const msj = encodeURIComponent(`✨ *AMARE BEAUTY* ✨\n\nHola ${cliente}, gracias por tu compra:\n🌸 *Producto:* ${p.nombre}\n🔢 *Cant:* ${cantidad}\n💰 *Total:* $${totalVenta.toLocaleString()}\n💳 *Pago:* ${metodo}`);
+            window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${msj}`, '_blank');
+        }
+
+        generarPDF({ cliente, producto: p.nombre, cantidad, total: totalVenta, metodo });
+        alert("Venta registrada");
+        cargarDesdeDrive();
+        switchTab('inventario');
+    } catch (e) { alert("Error al vender"); }
+}
+
+function generarPDF(datos) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.setTextColor(214, 51, 132);
+    doc.text("AMARE BEAUTY - RECIBO", 105, 20, { align: "center" });
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text(`Cliente: ${datos.cliente}`, 20, 40);
+    doc.text(`Producto: ${datos.producto}`, 20, 50);
+    doc.text(`Cantidad: ${datos.cantidad}`, 20, 60);
+    doc.text(`Total: $${datos.total.toLocaleString()}`, 20, 70);
+    doc.text(`Método: ${datos.metodo}`, 20, 80);
+    doc.save(`Recibo_${datos.cliente}.pdf`);
 }
 
 function switchTab(t) {
@@ -144,11 +120,47 @@ function switchTab(t) {
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     document.getElementById('sec-' + t).style.display = 'block';
     document.getElementById('tab-' + t).classList.add('active');
+    if(t === 'stats') dibujarGraficos();
+}
+
+function dibujarGraficos() {
+    const ctx = document.getElementById('canvasMetodos');
+    if (!ctx) return;
+    if (charts.m) charts.m.destroy();
+    
+    const stats = historial.reduce((acc, curr) => {
+        acc[curr.metodo] = (acc[curr.metodo] || 0) + 1;
+        return acc;
+    }, {});
+
+    charts.m = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(stats),
+            datasets: [{ data: Object.values(stats), backgroundColor: ['#d63384', '#3498db', '#f1c40f', '#2ecc71'] }]
+        }
+    });
 }
 
 function calcularVentasTotales() {
-    const total = inventario.reduce((sum, p) => sum + ((parseFloat(p.precio) || 0) * (parseFloat(p.vendidos) || 0)), 0);
+    const total = inventario.reduce((sum, p) => sum + (parseFloat(p.precio) * (parseFloat(p.vendidos) || 0)), 0);
     document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
+}
+
+function filtrarProductos() {
+    const txt = document.getElementById('busqueda').value.toLowerCase();
+    renderInventario(); // Re-renderizamos para filtrar
+    const items = document.querySelectorAll('.lista-item');
+    items.forEach(it => {
+        if (!it.textContent.toLowerCase().includes(txt)) it.style.display = 'none';
+    });
+}
+
+function verCatalogo() { window.open(URL_CATALOGO, '_blank'); }
+
+function enviarMarketingMasivo() {
+    const msj = encodeURIComponent(`✨ *AMARE BEAUTY* ✨\n¡Mira nuestras novedades! Haz clic aquí para ver el catálogo: ${URL_CATALOGO}`);
+    window.open(`https://wa.me/?text=${msj}`, '_blank');
 }
 
 window.onload = cargarDesdeDrive;
