@@ -1,6 +1,6 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJj-TZm_9__ZOWz_zQvi_ojC71mxAbjW_qBbn__9tpCTHIw8jG0AEqq6QKDSfCV0EFMg/exec"; 
 const CODIGO_PAIS = "57";
-const LOGO_PATH = "./logo.png"; // Usar ruta local para evitar errores de red
+const LOGO_URL = "./logo.png"; // Ruta local corregida
 const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=drive_link"; 
 
 let inventario = [];
@@ -12,7 +12,7 @@ function ocultarSplash() {
     const splash = document.getElementById('splash-screen');
     if (splash) {
         splash.style.opacity = '0';
-        setTimeout(() => splash.style.display = 'none', 800);
+        setTimeout(() => splash.style.display = 'none', 1000);
     }
 }
 
@@ -31,13 +31,13 @@ async function cargarDesdeDrive() {
         if (syncBtn) syncBtn.innerText = "🔄";
         ocultarSplash();
     } catch (e) { 
-        console.error("Error al cargar datos:", e);
+        console.error(e); 
         ocultarSplash();
     }
 }
 
-// CORRECCIÓN PARA EL ERROR CORS DE LAS CAPTURAS
-async function getBase64Image(path) {
+// CORRECCIÓN PARA EL ERROR DE LA CAPTURA (CORS)
+async function getBase64Image(url) {
     return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'Anonymous'; 
@@ -49,11 +49,8 @@ async function getBase64Image(path) {
             ctx.drawImage(this, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
-        img.onerror = () => {
-            console.warn("No se pudo procesar el logo para el PDF.");
-            resolve(null);
-        };
-        img.src = path;
+        img.onerror = () => resolve(null);
+        img.src = url;
     });
 }
 
@@ -64,12 +61,12 @@ function renderInventario() {
         const disp = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         const agotado = disp <= 0;
         return `<li class="lista-item" onclick="${agotado ? "alert('Sin stock')" : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}">
-            <div style="padding: 10px;">
-                <span style="font-weight: bold; font-size: 1.1rem;">${p.nombre}</span><br>
-                <small style="color: #666;">Disponibles: ${disp}</small>
-                <div class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</div>
+            <div>
+                <span style="font-weight:bold;">${p.nombre}</span><br>
+                <small>Stock: ${disp}</small>
+                <span class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</span>
             </div>
-            <button style="background:${agotado ? '#ccc' : '#2ecc71'}; color:white; border:none; padding:10px; border-radius:10px;">
+            <button style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:8px 15px; border-radius:10px;">
                 ${agotado ? 'AGOTADO' : 'VENDER'}
             </button>
         </li>`;
@@ -86,8 +83,6 @@ function irAVenta(fila, nombre) {
 
 async function registrarVenta() {
     const select = document.getElementById('select-producto');
-    if (!select.value) return alert("Selecciona un producto");
-    
     const fila = select.value;
     const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
     const cantidad = parseInt(document.getElementById('cant-venta').value);
@@ -104,34 +99,24 @@ async function registrarVenta() {
             body: JSON.stringify({ action: "venta", fila: parseInt(fila), productoNombre: nombreProd, cantidad, metodo, cliente, telefono: tel })
         });
         
-        const pdfData = { cliente, producto: nombreProd, cantidad, total: totalVenta, metodo };
-        await generarPDF(pdfData);
-
-        if (tel) {
-            const msg = encodeURIComponent(`¡Hola ${cliente}! ✨ Gracias por tu compra de *${nombreProd}* en Amare Beauty. ❤️ Aquí tienes tu comprobante por $${totalVenta.toLocaleString('es-CO')}. \n\n📖 Mira nuestro catálogo: ${URL_CATALOGO}`);
-            window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${msg}`, '_blank');
-        }
-        
-        alert("Venta registrada con éxito.");
+        await generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
+        alert("Venta registrada.");
         cargarDesdeDrive();
         switchTab('inventario');
-    } catch (e) { alert("Error al registrar la venta."); }
+    } catch (e) { alert("Error"); }
 }
 
 async function generarPDF(datos) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const imgData = await getBase64Image(LOGO_PATH);
-    
+    const imgData = await getBase64Image(LOGO_URL);
     if (imgData) {
         doc.setGState(new doc.GState({ opacity: 0.1 }));
-        doc.addImage(imgData, 'PNG', 40, 80, 130, 130);
+        doc.addImage(imgData, 'PNG', 45, 80, 120, 120);
         doc.setGState(new doc.GState({ opacity: 1.0 }));
-        doc.addImage(imgData, 'PNG', 15, 15, 30, 30);
+        doc.addImage(imgData, 'PNG', 15, 12, 35, 35);
     }
-    
     doc.setTextColor(214, 51, 132);
-    doc.setFontSize(22);
     doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
     doc.save(`Recibo_${datos.cliente}.pdf`);
 }
@@ -152,10 +137,8 @@ function calcularVentasTotales() {
 function filtrarSelectVentas() {
     const txt = document.getElementById('busqueda-venta').value.toLowerCase();
     const select = document.getElementById('select-producto');
-    select.innerHTML = inventario
-        .filter(p => p.nombre.toLowerCase().includes(txt))
-        .map(p => `<option value="${p.filaOriginal}">${p.nombre} (${(p.stock - p.vendidos)} disp.)</option>`)
-        .join('');
+    select.innerHTML = inventario.filter(p => p.nombre.toLowerCase().includes(txt))
+        .map(p => `<option value="${p.filaOriginal}">${p.nombre}</option>`).join('');
 }
 
 function filtrarProductos() {
