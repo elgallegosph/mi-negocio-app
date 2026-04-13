@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMWq66SSkUasvsWBrhKv3twXRLXEqnUtAmKsNCa9yOPyVaW70m6sQb8om1ucKD06be_w/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwT8PCPJYsOoUBBeJbiHWZeDHRUPn3QQOKCqWzLY37EC_SjL1VpMKttV68RGQ1oh_SkvQ/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
 const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
@@ -40,7 +40,7 @@ function renderInventario() {
                 <div>
                     <strong>${p.nombre}</strong><br>
                     <small>${agotado ? '❌ AGOTADO' : '✅ Stock: ' + stockActual}</small>
-                    <div style="color:#d63384; font-weight:bold; font-size:1.1rem;">$${parseFloat(p.precio).toLocaleString()}</div>
+                    <div style="color:#d63384; font-weight:bold;">$${parseFloat(p.precio).toLocaleString()}</div>
                 </div>
                 <button onclick="${agotado ? '' : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}" 
                     style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:10px 15px; border-radius:10px; cursor:${agotado ? 'not-allowed' : 'pointer'};">
@@ -55,7 +55,7 @@ function renderClientes() {
     const contenedor = document.getElementById('lista-clientes-marketing');
     contenedor.innerHTML = clientes.map(c => `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
-            <span>${c.nombre}</span>
+            <span style="font-size:0.9rem;">${c.nombre}</span>
             <button onclick="marketingIndividual('${c.tel}', '${c.nombre}')" style="background:#25d366; color:white; border:none; padding:5px 10px; border-radius:5px;">📲</button>
         </div>
     `).join('');
@@ -66,14 +66,11 @@ function marketingIndividual(tel, nombre) {
     window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
 }
 
-// FUNCIÓN DE MARKETING MASIVO RESTAURADA
 function marketingMasivo() {
     if (clientes.length === 0) return alert("No hay clientes registrados.");
-    alert(`Se abrirán los chats de ${clientes.length} clientes. Por favor envía el mensaje en cada uno.`);
+    alert(`Se abrirán los chats de ${clientes.length} clientes. Envía el catálogo en cada uno.`);
     clientes.forEach((c, index) => {
-        setTimeout(() => {
-            marketingIndividual(c.tel, c.nombre);
-        }, index * 1500); // Pequeño retraso para evitar bloqueo del navegador
+        setTimeout(() => marketingIndividual(c.tel, c.nombre), index * 1500);
     });
 }
 
@@ -104,10 +101,22 @@ async function registrarVenta() {
             window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
         }
 
-        alert("Venta registrada con éxito.");
+        await generarPDF({ cliente, producto: p.nombre, cantidad, total: totalVenta, metodo });
         cargarDesdeDrive(); 
         switchTab('inventario');
     } catch (e) { alert("Error al registrar venta"); }
+}
+
+async function generarPDF(datos) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setTextColor(214, 51, 132);
+    doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
+    doc.setFontSize(12); doc.setTextColor(0);
+    doc.text(`Cliente: ${datos.cliente}`, 15, 60);
+    doc.text(`Producto: ${datos.producto}`, 15, 70);
+    doc.text(`Total: $${datos.total.toLocaleString()}`, 15, 80);
+    doc.save(`Recibo_${datos.cliente}.pdf`);
 }
 
 function calcularVentasTotales() {
