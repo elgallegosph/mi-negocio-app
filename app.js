@@ -1,7 +1,7 @@
-const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzG4Yhneh_gNNrvdsOdPXW9vXuapez3DMRZfOedmUji44g-T5aix8wHxwaNvxwuqc4I/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
-const URL_CATALOGO = "https://drive.google.com/open?id=1rU759f0_bJVyNa_AM-shqBVrImPWHsOC"; 
+const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
 
 let inventario = [];
 let historial = [];
