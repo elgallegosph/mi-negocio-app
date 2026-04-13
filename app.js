@@ -1,6 +1,6 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJj-TZm_9__ZOWz_zQvi_ojC71mxAbjW_qBbn__9tpCTHIw8jG0AEqq6QKDSfCV0EFMg/exec"; 
 const CODIGO_PAIS = "57";
-const LOGO_URL = "./logo.png"; // Ruta local corregida
+const LOGO_URL = "./logo.png"; 
 const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=drive_link"; 
 
 let inventario = [];
@@ -36,7 +36,6 @@ async function cargarDesdeDrive() {
     }
 }
 
-// CORRECCIÓN PARA EL ERROR DE LA CAPTURA (CORS)
 async function getBase64Image(url) {
     return new Promise((resolve) => {
         const img = new Image();
@@ -62,11 +61,11 @@ function renderInventario() {
         const agotado = disp <= 0;
         return `<li class="lista-item" onclick="${agotado ? "alert('Sin stock')" : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}">
             <div>
-                <span style="font-weight:bold;">${p.nombre}</span><br>
-                <small>Stock: ${disp}</small>
-                <span class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</span>
+                <span style="font-weight:bold; font-size:1.1rem;">${p.nombre}</span><br>
+                <small>Disponibles: ${disp}</small>
+                <div class="price-tag">$${parseFloat(p.precio || 0).toLocaleString('es-CO')}</div>
             </div>
-            <button style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:8px 15px; border-radius:10px;">
+            <button style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:10px 20px; border-radius:12px; font-weight:bold;">
                 ${agotado ? 'AGOTADO' : 'VENDER'}
             </button>
         </li>`;
@@ -83,13 +82,14 @@ function irAVenta(fila, nombre) {
 
 async function registrarVenta() {
     const select = document.getElementById('select-producto');
+    if (!select.value) return alert("Selecciona un producto");
+    
     const fila = select.value;
     const nombreProd = select.options[select.selectedIndex].text.split(' (')[0];
     const cantidad = parseInt(document.getElementById('cant-venta').value);
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
     let tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
-
     const p = inventario.find(item => item.filaOriginal == fila);
     const totalVenta = (parseFloat(p.precio) || 0) * cantidad;
 
@@ -98,7 +98,6 @@ async function registrarVenta() {
             method: 'POST', mode: 'no-cors',
             body: JSON.stringify({ action: "venta", fila: parseInt(fila), productoNombre: nombreProd, cantidad, metodo, cliente, telefono: tel })
         });
-        
         await generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
         alert("Venta registrada.");
         cargarDesdeDrive();
@@ -146,11 +145,6 @@ function filtrarProductos() {
     document.querySelectorAll('#lista-inventario li').forEach(li => {
         li.style.display = li.textContent.toLowerCase().includes(txt) ? 'flex' : 'none';
     });
-}
-
-function actualizarSelect() {
-    const select = document.getElementById('select-producto');
-    if (select) filtrarSelectVentas();
 }
 
 function dibujarGraficos() {
