@@ -8,67 +8,64 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* FONDO ROSA CLARO TOTAL */
-        html, body {
+        /* FONDO ROSA CLARO FORZADO */
+        body {
             background-color: #fff0f5 !important; 
             margin: 0;
-            padding: 0;
             font-family: 'Segoe UI', sans-serif;
             min-height: 100vh;
         }
 
-        /* MARCA DE AGUA FIJA PARA TODAS LAS PESTAÑAS */
+        /* MARCA DE AGUA PERSISTENTE Detrás de todo */
         body::before {
             content: ""; 
             position: fixed; 
             top: 50%; 
             left: 50%;
-            width: 90%; 
-            height: 90%; 
-            max-width: 600px;
+            width: 80%; 
+            height: 80%; 
+            max-width: 500px;
             background: url('./logo.png') no-repeat center;
             background-size: contain; 
             transform: translate(-50%, -50%);
-            opacity: 0.12; /* Ajuste para que se note pero no moleste */
+            opacity: 0.15; /* Ajustado para que se vea bien sobre el rosa */
             z-index: -1; 
             pointer-events: none;
         }
 
-        /* Splash Screen */
+        /* Splash Screen con fondo rosa */
         #splash-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff0f5; display: flex; flex-direction: column;
             justify-content: center; align-items: center; z-index: 9999;
-            transition: opacity 0.8s ease;
+            transition: opacity 1s ease;
         }
         #splash-screen img { width: 220px; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
-        /* Ajuste de transparencia para ver la marca de agua */
-        .tab-content { background: transparent !important; }
-        
+        /* TARJETAS TRANSPARENTES PARA VER EL FONDO */
         .lista-item { 
-            background: rgba(255, 255, 255, 0.65) !important; /* Más transparente */
-            backdrop-filter: blur(2px);
-            margin-bottom: 10px;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            background: rgba(255, 255, 255, 0.6) !important; /* Transparencia clave */
+            backdrop-filter: blur(5px); /* Efecto cristalizado */
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; border-bottom: 1px solid rgba(0,0,0,0.05); 
+            margin-bottom: 10px; border-radius: 12px;
         }
-
+        
         .venta-form, .chart-card, .catalog-card {
             background: rgba(255, 255, 255, 0.75) !important;
-            backdrop-filter: blur(4px);
-            border-radius: 20px;
-            padding: 25px;
+            backdrop-filter: blur(5px);
+            padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
         }
 
-        .price-tag { font-size: 1.4rem; color: #d63384; font-weight: 800; }
+        .tab-content { background: transparent !important; }
+        .price-tag { font-size: 1.4rem; color: #d63384; font-weight: 800; display: block; }
         .btn-disabled { background: #ccc !important; cursor: not-allowed !important; }
     </style>
 </head>
 <body>
     <div id="splash-screen">
-        <img src="./logo.png" alt="Logo">
+        <img src="./logo.png" alt="Amare Beauty">
         <h1 style="color: #d63384; margin-top: 20px;">Amare Beauty</h1>
     </div>
 
@@ -98,12 +95,12 @@
 
             <section id="sec-ventas" class="tab-content" style="display:none;">
                 <div class="venta-form">
-                    <h3 style="color:#d63384;">Registrar Venta</h3>
-                    <input type="text" id="busqueda-venta" class="search-sales" placeholder="Buscar producto para vender..." onkeyup="filtrarSelectVentas()" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <select id="select-producto" size="5" style="width:100%; border-radius:10px; margin-bottom:15px;" onchange="validarStockSeleccionado()"></select>
+                    <label>🔍 Producto Seleccionado:</label>
+                    <input type="text" id="busqueda-venta" class="search-sales" placeholder="Buscar..." onkeyup="filtrarSelectVentas()">
+                    <select id="select-producto" size="5" style="width:100%; margin-bottom:15px; border-radius:8px;" onchange="validarStockSeleccionado()"></select>
                     
                     <label>Cantidad:</label><input type="number" id="cant-venta" value="1" min="1" oninput="validarStockSeleccionado()">
-                    <label>Método de Pago:</label>
+                    <label>Método:</label>
                     <select id="metodo-pago">
                         <option value="Efectivo">💵 Efectivo</option>
                         <option value="Transferencia">📱 Transferencia</option>
@@ -111,28 +108,28 @@
                         <option value="Fiado">📝 Fiado</option>
                     </select>
                     
-                    <div style="margin-top:20px;">
-                        <input type="text" id="nombre-cliente" placeholder="Nombre del cliente">
-                        <input type="tel" id="tel-cliente" placeholder="WhatsApp (ej: 300...)">
+                    <div style="margin-top:15px;">
+                        <input type="text" id="nombre-cliente" placeholder="Nombre">
+                        <input type="tel" id="tel-cliente" placeholder="300...">
                     </div>
-                    <button id="btn-registrar-final" onclick="registrarVenta()" class="btn-save" style="margin-top:20px;">GENERAR VENTA Y PDF</button>
+                    <button id="btn-registrar-final" onclick="registrarVenta()" class="btn-save" style="margin-top:20px;">REGISTRAR VENTA Y PDF</button>
                 </div>
             </section>
 
             <section id="sec-stats" class="tab-content" style="display:none; padding: 15px;">
                 <div class="chart-card">
-                    <h3 style="text-align:center; color:#d63384;">📊 Resumen de Pagos</h3>
+                    <h3 style="text-align:center; color:#d63384;">📊 Métodos de Pago</h3>
                     <div style="height: 300px;"><canvas id="canvasMetodos"></canvas></div>
                 </div>
             </section>
 
             <section id="sec-catalogo" class="tab-content" style="display:none; padding: 20px;">
                 <div class="catalog-card" style="text-align:center;">
-                    <h2 style="color: #d63384;">Catálogo de Productos</h2>
-                    <button onclick="verCatalogo()" class="btn-save" style="background: #6610f2;">VER PDF</button>
-                    <hr style="margin: 30px 0; opacity: 0.2;">
-                    <button onclick="enviarMarketingMasivo()" class="btn-save" style="background: #25d366;">ENVIAR CATÁLOGO POR WHATSAPP</button>
-                    <p id="status-marketing"></p>
+                    <h2 style="color: #d63384;">Catálogo</h2>
+                    <button onclick="verCatalogo()" class="btn-save" style="background: #6610f2;">VER PDF ACTUAL</button>
+                    <div style="margin-top: 30px;">
+                        <button onclick="enviarMarketingMasivo()" class="btn-save" style="background: #25d366;">ENVIAR A CLIENTES</button>
+                    </div>
                 </div>
             </section>
         </main>
