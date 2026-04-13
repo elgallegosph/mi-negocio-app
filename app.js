@@ -8,7 +8,6 @@ let historial = [];
 let listaClientes = []; 
 let charts = {};
 
-// Quitar portada al cargar
 function ocultarSplash() {
     const splash = document.getElementById('splash-screen');
     if (splash) {
@@ -56,13 +55,11 @@ async function cargarDesdeDrive() {
         calcularVentasTotales(); 
         actualizarSelect();
         if (syncBtn) syncBtn.innerText = "🔄";
-        
-        // Ocultar portada una vez cargado todo
         ocultarSplash();
     } catch (e) { 
         console.error(e); 
         if (syncBtn) syncBtn.innerText = "❌";
-        ocultarSplash(); // Ocultar aunque falle para poder usar la app
+        ocultarSplash();
     }
 }
 
