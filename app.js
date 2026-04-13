@@ -1,10 +1,16 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGA0kqsemniAT14iKs9y3LQ5RgOBYTbGlTWrTIUqHy0KiR7rB1HiWS-Gjfb--B8Rlb9Q/exec"; 
+const SCRIPT_URL = "Thttps://script.google.com/macros/s/AKfycbx_4mIHlRggmk4RwOZvIrHjCRpNJob2803-g10cN-K267ByugUj_OZUOySc5REiCWIJ/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
+const URL_CATALOGO = "https://drive.google.com/drive/u/0/folders/1q_5ROJrn6o6bqJzgOfsgRDLadYiqR7A7"; 
 
 let inventario = [];
 let historial = [];
 let charts = {};
+
+// Nueva función para marketing
+function verCatalogo() {
+    window.open(URL_CATALOGO, '_blank');
+}
 
 async function getBase64Image(url) {
     try {
@@ -156,12 +162,12 @@ async function registrarVenta() {
 
         if (telFinal !== "N/A") {
             let mensajeWhatsApp = "";
+            let enlaceCatalogo = `\n\n📖 Mira nuestro catálogo actualizado aquí: ${URL_CATALOGO}`;
             
-            // Lógica de mensajes según el método de pago
             if (metodo === "Fiado" || metodo === "Separado") {
-                mensajeWhatsApp = `¡Hola ${cliente}! ✨ Te envío el comprobante de tu producto: *${nombreProd}*. Recuerda que quedó pendiente de pago bajo la modalidad de *${metodo}*. ¡Gracias por confiar en Amare Beauty! ❤️`;
+                mensajeWhatsApp = `¡Hola ${cliente}! ✨ Te envío el comprobante de tu producto: *${nombreProd}*. Recuerda que quedó pendiente de pago bajo la modalidad de *${metodo}*. ¡Gracias por confiar en Amare Beauty! ❤️` + enlaceCatalogo;
             } else {
-                mensajeWhatsApp = `¡Hola ${cliente}! ✨ Gracias por tu compra de *${nombreProd}* en Amare Beauty. ❤️ Adjunto tu comprobante de pago por valor de $${totalVenta.toLocaleString('es-CO')}. ¡Que lo disfrutes!`;
+                mensajeWhatsApp = `¡Hola ${cliente}! ✨ Gracias por tu compra de *${nombreProd}* en Amare Beauty. ❤️ Adjunto tu comprobante de pago por valor de $${totalVenta.toLocaleString('es-CO')}. ¡Que lo disfrutes!` + enlaceCatalogo;
             }
 
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensajeWhatsApp)}`, '_blank');
@@ -182,7 +188,7 @@ function switchTab(t) {
     if (sec && btn) {
         sec.style.display = 'block';
         btn.classList.add('active');
-        if (t !== 'ventas') cargarDesdeDrive(); 
+        if (t === 'inventario' || t === 'stats') cargarDesdeDrive(); 
     }
     if(t === 'stats') setTimeout(dibujarGraficos, 300);
 }
