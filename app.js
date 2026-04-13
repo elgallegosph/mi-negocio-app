@@ -1,7 +1,7 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzG4Yhneh_gNNrvdsOdPXW9vXuapez3DMRZfOedmUji44g-T5aix8wHxwaNvxwuqc4I/exec"; 
+const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
-const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
+const URL_CATALOGO = "https://drive.google.com/open?id=1rU759f0_bJVyNa_AM-shqBVrImPWHsOC"; 
 
 let inventario = [];
 let historial = [];
@@ -25,15 +25,16 @@ async function cargarDesdeDrive() {
         
         if(icon) icon.classList.remove('loading');
         document.getElementById('splash-screen').style.display = 'none';
-    } catch (e) { 
-        console.error("Error cargando datos:", e);
-        if(icon) icon.classList.remove('loading');
-    }
+    } catch (e) { console.error("Error:", e); }
 }
 
 function calcularVentasTotales() {
-    // Calcula el total real basado en los productos vendidos multiplicados por su precio
-    const total = inventario.reduce((sum, p) => sum + (parseFloat(p.precio) * (parseFloat(p.vendidos) || 0)), 0);
+    // Se asegura de que cada valor sea numérico para evitar el "error" en el total
+    const total = inventario.reduce((sum, p) => {
+        const precio = parseFloat(p.precio) || 0;
+        const vendidos = parseFloat(p.vendidos) || 0;
+        return sum + (precio * vendidos);
+    }, 0);
     document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
 }
 
@@ -46,8 +47,8 @@ function renderInventario() {
             <div class="lista-item ${agotado ? 'sin-stock' : ''}">
                 <div>
                     <strong>${p.nombre}</strong><br>
-                    <small>${agotado ? '❌ SIN EXISTENCIAS' : '✅ Stock: ' + stockActual}</small>
-                    <div style="color:#d63384; font-weight:bold; font-size:1.1rem;">$${parseFloat(p.precio).toLocaleString()}</div>
+                    <small>${agotado ? '❌ AGOTADO' : '✅ Stock: ' + stockActual}</small>
+                    <div style="color:#d63384; font-weight:bold;">$${parseFloat(p.precio).toLocaleString()}</div>
                 </div>
                 <button onclick="${agotado ? '' : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}" 
                     style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:10px 15px; border-radius:12px; cursor:pointer;">
@@ -74,30 +75,26 @@ function dibujarGraficos() {
     if (!ctx) return;
     if (charts.m) charts.m.destroy();
     
-    // Agrupar datos reales del historial
     const stats = historial.reduce((acc, curr) => {
-        const m = curr.metodo || "Otro";
+        const m = curr.metodo || "Efectivo";
         acc[m] = (acc[m] || 0) + 1;
         return acc;
     }, {});
 
     charts.m = new Chart(ctx, {
-        type: 'pie',
+        type: 'doughnut',
         data: {
             labels: Object.keys(stats),
             datasets: [{
                 data: Object.values(stats),
                 backgroundColor: ['#d63384', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'],
-                borderWidth: 2,
-                borderColor: '#ffffff'
+                borderWidth: 2
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 }
@@ -105,16 +102,16 @@ function dibujarGraficos() {
 async function registrarVenta() {
     const select = document.getElementById('select-producto');
     const fila = select.value;
-    if (!fila) return alert("Por favor, selecciona un producto.");
+    if (!fila) return alert("Selecciona un producto");
 
     const p = inventario.find(item => item.filaOriginal == fila);
     const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
     const cantidad = parseInt(document.getElementById('cant-venta').value);
 
-    if (cantidad > stockActual) return alert("Lo sentimos, no hay stock suficiente.");
+    if (cantidad > stockActual) return alert("Sin stock suficiente");
 
     const metodo = document.getElementById('metodo-pago').value;
-    const cliente = document.getElementById('nombre-cliente').value || "Cliente General";
+    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
     let tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
     const totalVenta = parseFloat(p.precio) * cantidad;
 
@@ -124,18 +121,16 @@ async function registrarVenta() {
             body: JSON.stringify({ action: "venta", fila: parseInt(fila), productoNombre: p.nombre, cantidad, metodo, cliente, telefono: tel })
         });
 
-        // Generar Factura con Marca de Agua
         await generarFacturaProfesional({ cliente, producto: p.nombre, cantidad, total: totalVenta, metodo, precioU: p.precio });
         
-        // Enviar WhatsApp si hay número
         if (tel.length >= 10) {
-            const msj = `✨ *AMARE BEAUTY* ✨\n¡Hola ${cliente}! Muchas gracias por tu compra.\n\n📦 *Detalle:* ${p.nombre} (x${cantidad})\n💰 *Total:* $${totalVenta.toLocaleString()}\n💳 *Pago:* ${metodo}`;
+            const msj = `✨ *AMARE BEAUTY* ✨\n¡Hola ${cliente}! Gracias por tu compra.\n\n📦 *Detalle:* ${p.nombre} (x${cantidad})\n💰 *Total:* $${totalVenta.toLocaleString()}`;
             window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
         }
 
-        alert("¡Venta registrada exitosamente!");
+        alert("¡Venta exitosa!");
         switchTab('inventario');
-    } catch (e) { alert("Error al conectar con la base de datos."); }
+    } catch (e) { alert("Error de registro"); }
 }
 
 async function generarFacturaProfesional(datos) {
@@ -143,24 +138,21 @@ async function generarFacturaProfesional(datos) {
     const doc = new jsPDF();
     const imgData = await getBase64Image(LOGO_URL);
     
-    // Marca de Agua Central
     if (imgData) {
         doc.saveGraphicsState();
         doc.setGState(new doc.GState({opacity: 0.08}));
-        doc.addImage(imgData, 'PNG', 45, 80, 120, 120);
+        doc.addImage(imgData, 'PNG', 45, 80, 120, 120); // Marca de agua
         doc.restoreGraphicsState();
-        doc.addImage(imgData, 'PNG', 15, 15, 25, 25);
+        doc.addImage(imgData, 'PNG', 15, 15, 25, 25); // Logo esquina
     }
 
     doc.setFont("helvetica", "bold");
     doc.setTextColor(214, 51, 132);
     doc.setFontSize(22);
     doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
-    
     doc.setFontSize(10);
     doc.setTextColor(80);
-    doc.text("COMPROBANTE DE PAGO", 195, 32, { align: "right" });
-
+    doc.text("RECIBO DE VENTA", 195, 32, { align: "right" });
     doc.setDrawColor(214, 51, 132);
     doc.line(15, 45, 195, 45);
 
@@ -168,37 +160,23 @@ async function generarFacturaProfesional(datos) {
     doc.setFontSize(11);
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 55);
     doc.text(`Cliente: ${datos.cliente}`, 15, 62);
-    doc.text(`Forma de Pago: ${datos.metodo}`, 15, 69);
+    doc.text(`Pago: ${datos.metodo}`, 15, 69);
 
-    // Encabezado de Tabla
     doc.setFillColor(245, 245, 245);
     doc.rect(15, 80, 180, 10, 'F');
-    doc.setFont("helvetica", "bold");
     doc.text("Producto", 20, 87);
     doc.text("Cant.", 110, 87);
-    doc.text("Precio Unit.", 140, 87);
     doc.text("Total", 175, 87);
 
-    // Contenido
     doc.setFont("helvetica", "normal");
     doc.text(datos.producto, 20, 98);
     doc.text(datos.cantidad.toString(), 115, 98);
-    doc.text(`$${parseFloat(datos.precioU).toLocaleString()}`, 140, 98);
     doc.text(`$${datos.total.toLocaleString()}`, 175, 98);
 
-    doc.setDrawColor(200);
-    doc.line(15, 110, 195, 110);
-    
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
-    doc.text(`TOTAL A PAGAR: $${datos.total.toLocaleString()}`, 195, 120, { align: "right" });
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "italic");
-    doc.setTextColor(120);
-    doc.text("Gracias por apoyar nuestro emprendimiento.", 105, 150, { align: "center" });
-
-    doc.save(`Amare_Factura_${datos.cliente.replace(/\s/g, '_')}.pdf`);
+    doc.text(`TOTAL: $${datos.total.toLocaleString()}`, 195, 120, { align: "right" });
+    doc.save(`Recibo_Amare_${datos.cliente}.pdf`);
 }
 
 async function getBase64Image(url) {
@@ -219,22 +197,20 @@ function renderClientes() {
     const contenedor = document.getElementById('lista-clientes-marketing');
     contenedor.innerHTML = clientes.map(c => `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
-            <span style="font-weight:500;">${c.nombre}</span>
-            <button onclick="marketingIndividual('${c.tel}', '${c.nombre}')" style="background:#25d366; color:white; border:none; padding:6px 12px; border-radius:8px; font-size:14px;">WhatsApp</button>
+            <span>${c.nombre}</span>
+            <button onclick="marketingIndividual('${c.tel}', '${c.nombre}')" style="background:#25d366; color:white; border:none; padding:5px 10px; border-radius:8px;">WhatsApp</button>
         </div>
     `).join('');
 }
 
 function marketingIndividual(tel, nombre) {
-    const msj = `¡Hola ${nombre}! ✨ Te enviamos nuestro catálogo actualizado de *Amare Beauty* para que no te pierdas nada: ${URL_CATALOGO}`;
+    const msj = `¡Hola ${nombre}! ✨ Te enviamos nuestro catálogo de *Amare Beauty*: ${URL_CATALOGO}`;
     window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
 }
 
 function marketingMasivo() {
-    if (clientes.length === 0) return alert("No hay clientes en el historial.");
-    if(confirm(`Se abrirán ${clientes.length} chats. ¿Continuar?`)) {
-        clientes.forEach((c, i) => setTimeout(() => marketingIndividual(c.tel, c.nombre), i * 1800));
-    }
+    if (clientes.length === 0) return alert("Sin clientes registrados.");
+    clientes.forEach((c, i) => setTimeout(() => marketingIndividual(c.tel, c.nombre), i * 1800));
 }
 
 function filtrarSelectVentas() {
@@ -243,7 +219,7 @@ function filtrarSelectVentas() {
         .filter(p => p.nombre.toLowerCase().includes(txt))
         .map(p => {
             const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-            return `<option value="${p.filaOriginal}" ${stockActual <= 0 ? 'disabled' : ''}>${p.nombre} (${stockActual <= 0 ? 'SIN STOCK' : '$' + parseFloat(p.precio).toLocaleString()})</option>`;
+            return `<option value="${p.filaOriginal}" ${stockActual <= 0 ? 'disabled' : ''}>${p.nombre} (${stockActual <= 0 ? 'AGOTADO' : '$' + parseFloat(p.precio).toLocaleString()})</option>`;
         }).join('');
 }
 
