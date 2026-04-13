@@ -1,58 +1,69 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxAZo91g-tTrRJXjgtL7Yb2hP7Wc-v4sFbBm95gEfH5fqBdFg5WH-CkrNgjFvC31oqZw/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZW2T0urgpErKtPyBUUcy-gQpyBm3zXCqnETIo2vnET63YOtMTPw9qJQlvFcVGUo1d8Q/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
 const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
 
 let inventario = [];
 let historial = [];
+let clientes = [];
 let charts = {};
 
 async function cargarDesdeDrive() {
     const icon = document.getElementById('btn-sync-icon');
-    if(icon) icon.classList.add('loading'); // Mostramos "cargando"
-    
+    if(icon) icon.classList.add('loading');
     try {
         const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
         const data = await response.json();
         inventario = data.inventario || [];
         historial = data.historial || [];
+        clientes = data.clientes || [];
         
         renderInventario();
+        renderClientes();
         calcularVentasTotales(); 
         filtrarSelectVentas();
         
         if(icon) icon.classList.remove('loading');
         document.getElementById('splash-screen').style.display = 'none';
-    } catch (e) { 
-        console.error(e);
-        if(icon) icon.classList.remove('loading');
-    }
-}
-
-function calcularVentasTotales() {
-    const total = inventario.reduce((sum, p) => sum + (parseFloat(p.precio) * (parseFloat(p.vendidos) || 0)), 0);
-    document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
+    } catch (e) { console.error(e); }
 }
 
 function renderInventario() {
     const contenedor = document.getElementById('lista-inventario');
-    contenedor.innerHTML = inventario.map(p => `
-        <div class="lista-item">
-            <div>
-                <strong>${p.nombre}</strong><br>
-                <small>Disp: ${(p.stock - p.vendidos)}</small>
-                <div class="price-tag">$${parseFloat(p.precio).toLocaleString()}</div>
+    contenedor.innerHTML = inventario.map(p => {
+        const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        const agotado = stockActual <= 0;
+        
+        return `
+            <div class="lista-item ${agotado ? 'sin-stock' : ''}">
+                <div>
+                    <strong>${p.nombre}</strong><br>
+                    <small>${agotado ? 'AGOTADO' : 'Stock: ' + stockActual}</small>
+                    <div class="price-tag">$${parseFloat(p.precio).toLocaleString()}</div>
+                </div>
+                <button 
+                    onclick="${agotado ? '' : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}" 
+                    style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:10px; border-radius:10px; cursor:${agotado ? 'not-allowed' : 'pointer'};">
+                    ${agotado ? 'SIN STOCK' : 'VENDER'}
+                </button>
             </div>
-            <button onclick="irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')" style="background:#d63384; color:white; border:none; padding:10px; border-radius:10px;">VENDER</button>
+        `;
+    }).join('');
+}
+
+function renderClientes() {
+    const contenedor = document.getElementById('lista-clientes-marketing');
+    contenedor.innerHTML = clientes.map(c => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
+            <span>${c.nombre} (${c.tel})</span>
+            <button onclick="marketingIndividual('${c.tel}', '${c.nombre}')" style="background:#25d366; color:white; border:none; padding:5px 10px; border-radius:5px;">Enviar Catálogo</button>
         </div>
     `).join('');
 }
 
-function irAVenta(fila, nombre) {
-    switchTab('ventas');
-    document.getElementById('busqueda-venta').value = nombre;
-    filtrarSelectVentas();
-    document.getElementById('select-producto').value = fila;
+function marketingIndividual(tel, nombre) {
+    const msj = `¡Hola ${nombre}! ✨ Mira las novedades que tenemos en *Amare Beauty* hoy: ${URL_CATALOGO}`;
+    window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
 }
 
 async function registrarVenta() {
@@ -61,7 +72,11 @@ async function registrarVenta() {
     if (!fila) return alert("Selecciona producto");
 
     const p = inventario.find(item => item.filaOriginal == fila);
+    const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
     const cantidad = parseInt(document.getElementById('cant-venta').value);
+
+    if (cantidad > stockActual) return alert("No hay suficiente stock.");
+
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
     let tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
@@ -74,14 +89,12 @@ async function registrarVenta() {
         });
 
         if (tel.length >= 10) {
-            let msj = `¡Hola ${cliente}! ✨ Recibo de *Amare Beauty*. Producto: ${p.nombre}. Total: $${totalVenta.toLocaleString()}. Pago: ${metodo}. ¡Vuelve pronto!`;
+            let msj = `¡Hola ${cliente}! ✨ Recibo de *Amare Beauty*. Producto: ${p.nombre}. Total: $${totalVenta.toLocaleString()}. ¡Gracias!`;
             window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
         }
 
         await generarPDF({ cliente, producto: p.nombre, cantidad, total: totalVenta, metodo });
-        
-        alert("¡Venta Exitosa!");
-        cargarDesdeDrive(); // Actualización automática tras vender
+        cargarDesdeDrive(); 
         switchTab('inventario');
     } catch (e) { alert("Error"); }
 }
@@ -96,7 +109,6 @@ async function getBase64Image(url) {
             canvas.getContext('2d').drawImage(this, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
-        img.onerror = () => resolve(null);
         img.src = url;
     });
 }
@@ -105,14 +117,10 @@ async function generarPDF(datos) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const imgData = await getBase64Image(LOGO_URL);
-
     if (imgData) doc.addImage(imgData, 'PNG', 15, 10, 30, 30);
     doc.setTextColor(214, 51, 132);
-    doc.setFontSize(22);
     doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
-    
     doc.setFontSize(12); doc.setTextColor(0);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 50);
     doc.text(`Cliente: ${datos.cliente}`, 15, 60);
     doc.text(`Producto: ${datos.producto}`, 15, 70);
     doc.text(`Total: $${datos.total.toLocaleString()}`, 15, 80);
@@ -137,11 +145,19 @@ function dibujarGraficos() {
     });
 }
 
+function calcularVentasTotales() {
+    const total = inventario.reduce((sum, p) => sum + (parseFloat(p.precio) * (parseFloat(p.vendidos) || 0)), 0);
+    document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
+}
+
 function filtrarSelectVentas() {
     const txt = document.getElementById('busqueda-venta').value.toLowerCase();
     document.getElementById('select-producto').innerHTML = inventario
         .filter(p => p.nombre.toLowerCase().includes(txt))
-        .map(p => `<option value="${p.filaOriginal}">${p.nombre} ($${parseFloat(p.precio).toLocaleString()})</option>`).join('');
+        .map(p => {
+            const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+            return `<option value="${p.filaOriginal}" ${stockActual <= 0 ? 'disabled' : ''}>${p.nombre} (${stockActual <= 0 ? 'AGOTADO' : '$' + parseFloat(p.precio).toLocaleString()})</option>`;
+        }).join('');
 }
 
 function filtrarProductos() {
@@ -153,17 +169,11 @@ function filtrarProductos() {
 
 function verCatalogo() { window.open(URL_CATALOGO, '_blank'); }
 
-// MARKETING: Envía catálogo y guarda registro en Base de Datos
-async function enviarMarketingMasivo() {
-    try {
-        await fetch(SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors',
-            body: JSON.stringify({ action: "marketing" })
-        });
-        const msj = `✨ ¡Hola! Mira nuestro catálogo actualizado de *Amare Beauty* aquí: ${URL_CATALOGO}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(msj)}`, '_blank');
-        alert("Marketing registrado en la base de datos.");
-    } catch (e) { console.error(e); }
+function irAVenta(fila, nombre) {
+    switchTab('ventas');
+    document.getElementById('busqueda-venta').value = nombre;
+    filtrarSelectVentas();
+    document.getElementById('select-producto').value = fila;
 }
 
 window.onload = cargarDesdeDrive;
