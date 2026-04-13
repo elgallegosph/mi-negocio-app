@@ -5,20 +5,29 @@ const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k6
 
 let inventario = [];
 let historial = [];
-let listaClientes = []; // Nueva lista para marketing
+let listaClientes = []; 
 let charts = {};
+
+// Quitar portada al cargar
+function ocultarSplash() {
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => {
+            splash.style.visibility = 'hidden';
+        }, 1000);
+    }
+}
 
 function verCatalogo() {
     window.open(URL_CATALOGO, '_blank');
 }
 
-// Función para Marketing Masivo
 async function enviarMarketingMasivo() {
     if (listaClientes.length === 0) {
         alert("No hay clientes registrados con teléfono todavía.");
         return;
     }
-
     const confirmacion = confirm(`¿Quieres abrir los chats para enviar el catálogo a ${listaClientes.length} clientes?`);
     if (!confirmacion) return;
 
@@ -28,31 +37,10 @@ async function enviarMarketingMasivo() {
     for (let i = 0; i < listaClientes.length; i++) {
         const c = listaClientes[i];
         const mensaje = encodeURIComponent(`¡Hola ${c.nombre}! ✨ Te compartimos nuestro catálogo actualizado de Amare Beauty con muchas novedades para ti: ${URL_CATALOGO}`);
-        
-        // Abrir cada chat en una pestaña nueva
         window.open(`https://wa.me/${c.tel}?text=${mensaje}`, '_blank');
-        
-        // Pequeña pausa para no saturar el navegador
         await new Promise(r => setTimeout(r, 800));
     }
-    
     status.innerText = "✅ Chats abiertos con éxito.";
-}
-
-async function getBase64Image(url) {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Error imagen local");
-        const blob = await response.blob();
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-        });
-    } catch (e) {
-        console.error("Error logo:", e);
-        return null;
-    }
 }
 
 async function cargarDesdeDrive() {
@@ -63,12 +51,31 @@ async function cargarDesdeDrive() {
         const data = await response.json();
         inventario = data.inventario || [];
         historial = data.historial || [];
-        listaClientes = data.clientes || []; // Cargar lista de clientes
+        listaClientes = data.clientes || [];
         renderInventario();
         calcularVentasTotales(); 
         actualizarSelect();
         if (syncBtn) syncBtn.innerText = "🔄";
-    } catch (e) { console.error(e); if (syncBtn) syncBtn.innerText = "❌"; }
+        
+        // Ocultar portada una vez cargado todo
+        ocultarSplash();
+    } catch (e) { 
+        console.error(e); 
+        if (syncBtn) syncBtn.innerText = "❌";
+        ocultarSplash(); // Ocultar aunque falle para poder usar la app
+    }
+}
+
+async function getBase64Image(url) {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) { return null; }
 }
 
 function renderInventario() {
@@ -177,7 +184,6 @@ async function registrarVenta() {
     btn.disabled = true;
     try {
         let telFinal = telInput ? (telInput.startsWith(CODIGO_PAIS) ? telInput : CODIGO_PAIS + telInput) : "N/A";
-        
         await fetch(SCRIPT_URL, {
             method: 'POST', mode: 'no-cors',
             body: JSON.stringify({
@@ -185,22 +191,18 @@ async function registrarVenta() {
                 cantidad, metodo, cliente, telefono: telFinal
             })
         });
-
         await generarPDF({ cliente, producto: nombreProd, cantidad, total: totalVenta, metodo });
 
         if (telFinal !== "N/A") {
             let mensajeWhatsApp = "";
             let enlaceCatalogo = `\n\n📖 Mira nuestro catálogo actualizado aquí: ${URL_CATALOGO}`;
-            
             if (metodo === "Fiado" || metodo === "Separado") {
                 mensajeWhatsApp = `¡Hola ${cliente}! ✨ Te envío el comprobante de tu producto: *${nombreProd}*. Recuerda que quedó pendiente de pago bajo la modalidad de *${metodo}*. ¡Gracias por confiar en Amare Beauty! ❤️` + enlaceCatalogo;
             } else {
                 mensajeWhatsApp = `¡Hola ${cliente}! ✨ Gracias por tu compra de *${nombreProd}* en Amare Beauty. ❤️ Adjunto tu comprobante de pago por valor de $${totalVenta.toLocaleString('es-CO')}. ¡Que lo disfrutes!` + enlaceCatalogo;
             }
-
             window.open(`https://wa.me/${telFinal}?text=${encodeURIComponent(mensajeWhatsApp)}`, '_blank');
         }
-
         alert("Venta registrada con éxito.");
         btn.disabled = false;
         cargarDesdeDrive();
@@ -216,7 +218,7 @@ function switchTab(t) {
     if (sec && btn) {
         sec.style.display = 'block';
         btn.classList.add('active');
-        if (t === 'inventario' || t === 'stats' || t === 'catalogo') cargarDesdeDrive(); 
+        if (t !== 'ventas') cargarDesdeDrive(); 
     }
     if(t === 'stats') setTimeout(dibujarGraficos, 300);
 }
