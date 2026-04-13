@@ -7,54 +7,30 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { background-color: #fff0f5; margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
-        
+        body { background-color: #fff0f5; margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; overflow-x: hidden; }
         body::before {
-            content: ""; position: fixed; top: 50%; left: 50%;
-            width: 90%; height: 90%; max-width: 800px;
-            background: url('./logo.png') no-repeat center;
-            background-size: contain; transform: translate(-50%, -50%);
-            opacity: 0.15; z-index: -1; pointer-events: none;
+            content: ""; position: fixed; top: 50%; left: 50%; width: 90%; height: 90%; max-width: 800px;
+            background: url('./logo.png') no-repeat center; background-size: contain;
+            transform: translate(-50%, -50%); opacity: 0.15; z-index: -1; pointer-events: none;
         }
-
         header { background: #2c3e50; color: white; padding: 15px; text-align: center; border-radius: 0 0 25px 25px; }
         .banner-total { background: #d63384; padding: 15px; border-radius: 15px; margin: 10px auto; width: 85%; }
-
         .tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
-        .tabs button { 
-            padding: 12px; border-radius: 12px; border: none; font-weight: bold;
-            background: rgba(255, 255, 255, 0.1); color: white; cursor: pointer;
-        }
+        .tabs button { padding: 12px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; cursor: pointer; }
         .tabs button.active { background: #d63384 !important; }
-
-        .tab-content { padding: 15px; }
-        .card { background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; margin-bottom: 15px; }
-        
-        .lista-item { 
-            background: rgba(255, 255, 255, 0.8); border-radius: 15px; padding: 15px; 
-            margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
-        }
-
+        .card { background: rgba(255,255,255,0.5); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; margin-bottom: 15px; }
+        .lista-item { background: rgba(255,255,255,0.8); border-radius: 15px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .btn-sync { background: #d63384; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; width: 45px; height: 45px; }
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        .price-tag { color: #d63384; font-weight: 800; font-size: 1.2rem; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
-        
         .sin-stock { opacity: 0.6; filter: grayscale(1); }
-
-        #splash-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff0f5; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 9999;
-        }
+        #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff0f5; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: 0.5s; }
     </style>
 </head>
 <body>
     <div id="splash-screen">
         <img src="./logo.png" alt="Logo" style="width:180px;">
-        <h2 style="color: #d63384;">Amare Beauty</h2>
+        <h2 style="color: #d63384;">Cargando Amare Beauty...</h2>
     </div>
 
     <header>
@@ -71,10 +47,10 @@
         </nav>
     </header>
 
-    <main>
+    <main style="padding: 15px;">
         <section id="sec-inventario" class="tab-content">
             <div style="display:flex; gap:10px; align-items: center; margin-bottom:15px;">
-                <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrarProductos()">
+                <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrarProductos()" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;">
                 <button onclick="cargarDesdeDrive()" class="btn-sync" id="btn-sync-icon">🔄</button>
             </div>
             <div id="lista-inventario"></div>
@@ -82,11 +58,11 @@
 
         <section id="sec-ventas" class="tab-content" style="display:none;">
             <div class="card">
-                <input type="text" id="busqueda-venta" placeholder="Buscar producto..." onkeyup="filtrarSelectVentas()">
-                <select id="select-producto" size="4"></select>
+                <input type="text" id="busqueda-venta" placeholder="Producto..." onkeyup="filtrarSelectVentas()">
+                <select id="select-producto" size="4" style="width:100%; margin:10px 0; border-radius:10px;"></select>
                 <div style="display:flex; gap:10px;">
-                    <input type="number" id="cant-venta" value="1" min="1">
-                    <select id="metodo-pago">
+                    <input type="number" id="cant-venta" value="1" min="1" style="width:30%;">
+                    <select id="metodo-pago" style="width:70%;">
                         <option value="Efectivo">Efectivo</option>
                         <option value="Transferencia">Transferencia</option>
                         <option value="Separado">Separado</option>
@@ -95,23 +71,22 @@
                 </div>
                 <input type="text" id="nombre-cliente" placeholder="Nombre cliente">
                 <input type="tel" id="tel-cliente" placeholder="WhatsApp">
-                <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:12px; font-weight:bold;">REGISTRAR VENTA</button>
+                <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:12px; font-weight:bold; margin-top:10px;">REGISTRAR VENTA</button>
             </div>
         </section>
 
         <section id="sec-stats" class="tab-content" style="display:none;">
+            <div class="card"><canvas id="canvasMetodos"></canvas></div>
             <div class="card">
-                <canvas id="canvasMetodos"></canvas>
-            </div>
-            <div class="card">
-                <h3>Clientes Registrados</h3>
-                <div id="lista-clientes-marketing" style="max-height: 200px; overflow-y: auto;"></div>
+                <h3>Marketing a Clientes</h3>
+                <button onclick="marketingMasivo()" style="width:100%; padding:12px; background:#25d366; color:white; border:none; border-radius:10px; font-weight:bold; margin-bottom:10px;">ENVIAR CATÁLOGO A TODOS</button>
+                <div id="lista-clientes-marketing"></div>
             </div>
         </section>
 
         <section id="sec-catalogo" class="tab-content" style="display:none;">
             <div class="card" style="text-align:center;">
-                <button onclick="verCatalogo()" style="width:100%; padding:15px; background:#6610f2; color:white; border:none; border-radius:10px; margin-bottom:15px;">VER CATÁLOGO</button>
+                <button onclick="verCatalogo()" style="width:100%; padding:20px; background:#6610f2; color:white; border:none; border-radius:15px; font-size:1.2rem; font-weight:bold;">ABRIR CATÁLOGO PDF</button>
             </div>
         </section>
     </main>
