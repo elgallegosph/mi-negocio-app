@@ -21,6 +21,7 @@
         .search-sales { width: 100%; padding: 12px; margin-bottom: 8px; border: 2px solid #fce4ec; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
         .btn-disabled { background: #ccc !important; cursor: not-allowed !important; }
         .catalog-card { background: white; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 20px; }
+        .marketing-section { margin-top: 30px; border-top: 2px dashed #ddd; padding-top: 20px; }
     </style>
 </head>
 <body>
@@ -84,9 +85,16 @@
 
             <section id="sec-catalogo" class="tab-content" style="display:none; padding: 20px;">
                 <div class="catalog-card">
-                    <h2 style="color: #d63384;">Nuestro Catálogo</h2>
-                    <p>Haz clic en el botón de abajo para ver todos nuestros productos disponibles y precios actualizados.</p>
-                    <button onclick="verCatalogo()" class="btn-save" style="background: #6610f2; width: auto; padding: 15px 30px;">ABRIR CATÁLOGO PDF</button>
+                    <h2 style="color: #d63384;">Gestión de Catálogo</h2>
+                    <p>Visualiza el PDF actual o compártelo con tus clientes.</p>
+                    <button onclick="verCatalogo()" class="btn-save" style="background: #6610f2; width: auto; padding: 15px 30px; margin-bottom: 10px;">VER PDF ACTUAL</button>
+                    
+                    <div class="marketing-section">
+                        <h3 style="color: #25d366;">🚀 Marketing de WhatsApp</h3>
+                        <p style="font-size: 0.9rem; color: #666;">Envía el catálogo a todos tus clientes registrados automáticamente.</p>
+                        <button onclick="enviarMarketingMasivo()" class="btn-save" style="background: #25d366; border: none;">ENVIAR CATÁLOGO A CLIENTES</button>
+                        <p id="status-marketing" style="margin-top: 10px; font-weight: bold;"></p>
+                    </div>
                 </div>
             </section>
         </main>
