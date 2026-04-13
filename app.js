@@ -68,7 +68,7 @@ function marketingIndividual(tel, nombre) {
 
 function marketingMasivo() {
     if (clientes.length === 0) return alert("No hay clientes registrados.");
-    alert(`Se abrirán los chats de ${clientes.length} clientes. Envía el catálogo en cada uno.`);
+    alert(`Se abrirán los chats de ${clientes.length} clientes.`);
     clientes.forEach((c, index) => {
         setTimeout(() => marketingIndividual(c.tel, c.nombre), index * 1500);
     });
@@ -77,13 +77,13 @@ function marketingMasivo() {
 async function registrarVenta() {
     const select = document.getElementById('select-producto');
     const fila = select.value;
-    if (!fila) return alert("Selecciona producto");
+    if (!fila) return alert("Por favor, selecciona un producto.");
 
     const p = inventario.find(item => item.filaOriginal == fila);
     const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
     const cantidad = parseInt(document.getElementById('cant-venta').value);
 
-    if (cantidad > stockActual) return alert("Error: No hay suficiente stock.");
+    if (cantidad > stockActual) return alert("Error: Stock insuficiente.");
 
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
@@ -101,22 +101,10 @@ async function registrarVenta() {
             window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
         }
 
-        await generarPDF({ cliente, producto: p.nombre, cantidad, total: totalVenta, metodo });
+        alert("¡Venta registrada!");
         cargarDesdeDrive(); 
         switchTab('inventario');
-    } catch (e) { alert("Error al registrar venta"); }
-}
-
-async function generarPDF(datos) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setTextColor(214, 51, 132);
-    doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
-    doc.setFontSize(12); doc.setTextColor(0);
-    doc.text(`Cliente: ${datos.cliente}`, 15, 60);
-    doc.text(`Producto: ${datos.producto}`, 15, 70);
-    doc.text(`Total: $${datos.total.toLocaleString()}`, 15, 80);
-    doc.save(`Recibo_${datos.cliente}.pdf`);
+    } catch (e) { alert("Error de conexión."); }
 }
 
 function calcularVentasTotales() {
