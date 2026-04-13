@@ -1,7 +1,7 @@
-const SCRIPT_URL = "Thttps://script.google.com/macros/s/AKfycbx_4mIHlRggmk4RwOZvIrHjCRpNJob2803-g10cN-K267ByugUj_OZUOySc5REiCWIJ/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx_4mIHlRggmk4RwOZvIrHjCRpNJob2803-g10cN-K267ByugUj_OZUOySc5REiCWIJ/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
-const URL_CATALOGO = "https://drive.google.com/drive/u/0/folders/1q_5ROJrn6o6bqJzgOfsgRDLadYiqR7A7"; 
+const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
 
 let inventario = [];
 let historial = [];
