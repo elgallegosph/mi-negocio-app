@@ -1,148 +1,109 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwT8PCPJYsOoUBBeJbiHWZeDHRUPn3QQOKCqWzLY37EC_SjL1VpMKttV68RGQ1oh_SkvQ/exec"; 
-const CODIGO_PAIS = "57";
-const LOGO_URL = "./logo.png"; 
-const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
-
-let inventario = [];
-let clientes = [];
-let charts = {};
-
-async function cargarDesdeDrive() {
-    const icon = document.getElementById('btn-sync-icon');
-    if(icon) icon.classList.add('loading');
-    try {
-        const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
-        const data = await response.json();
-        inventario = data.inventario || [];
-        clientes = data.clientes || [];
-        
-        renderInventario();
-        renderClientes();
-        calcularVentasTotales(); 
-        filtrarSelectVentas();
-        
-        if(icon) icon.classList.remove('loading');
-        document.getElementById('splash-screen').style.opacity = '0';
-        setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 500);
-    } catch (e) { 
-        console.error(e);
-        if(icon) icon.classList.remove('loading');
-    }
-}
-
-function renderInventario() {
-    const contenedor = document.getElementById('lista-inventario');
-    contenedor.innerHTML = inventario.map(p => {
-        const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-        const agotado = stockActual <= 0;
-        return `
-            <div class="lista-item ${agotado ? 'sin-stock' : ''}">
-                <div>
-                    <strong>${p.nombre}</strong><br>
-                    <small>${agotado ? '❌ AGOTADO' : '✅ Stock: ' + stockActual}</small>
-                    <div style="color:#d63384; font-weight:bold;">$${parseFloat(p.precio).toLocaleString()}</div>
-                </div>
-                <button onclick="${agotado ? '' : `irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')`}" 
-                    style="background:${agotado ? '#ccc' : '#d63384'}; color:white; border:none; padding:10px 15px; border-radius:10px; cursor:${agotado ? 'not-allowed' : 'pointer'};">
-                    ${agotado ? 'SIN STOCK' : 'VENDER'}
-                </button>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderClientes() {
-    const contenedor = document.getElementById('lista-clientes-marketing');
-    contenedor.innerHTML = clientes.map(c => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
-            <span style="font-size:0.9rem;">${c.nombre}</span>
-            <button onclick="marketingIndividual('${c.tel}', '${c.nombre}')" style="background:#25d366; color:white; border:none; padding:5px 10px; border-radius:5px;">📲</button>
-        </div>
-    `).join('');
-}
-
-function marketingIndividual(tel, nombre) {
-    const msj = `¡Hola ${nombre}! ✨ Mira nuestro catálogo de *Amare Beauty* aquí: ${URL_CATALOGO}`;
-    window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
-}
-
-function marketingMasivo() {
-    if (clientes.length === 0) return alert("No hay clientes registrados.");
-    alert(`Se abrirán los chats de ${clientes.length} clientes.`);
-    clientes.forEach((c, index) => {
-        setTimeout(() => marketingIndividual(c.tel, c.nombre), index * 1500);
-    });
-}
-
-async function registrarVenta() {
-    const select = document.getElementById('select-producto');
-    const fila = select.value;
-    if (!fila) return alert("Por favor, selecciona un producto.");
-
-    const p = inventario.find(item => item.filaOriginal == fila);
-    const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-    const cantidad = parseInt(document.getElementById('cant-venta').value);
-
-    if (cantidad > stockActual) return alert("Error: Stock insuficiente.");
-
-    const metodo = document.getElementById('metodo-pago').value;
-    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
-    let tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
-    const totalVenta = parseFloat(p.precio) * cantidad;
-
-    try {
-        await fetch(SCRIPT_URL, {
-            method: 'POST', mode: 'no-cors',
-            body: JSON.stringify({ action: "venta", fila: parseInt(fila), productoNombre: p.nombre, cantidad, metodo, cliente, telefono: tel })
-        });
-
-        if (tel.length >= 10) {
-            const msj = `✨ *AMARE BEAUTY* ✨\n¡Hola ${cliente}! Gracias por tu compra.\n📦 *Producto:* ${p.nombre}\n💰 *Total:* $${totalVenta.toLocaleString()}`;
-            window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amare Beauty - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { background-color: #fff0f5; margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+        body::before {
+            content: ""; position: fixed; top: 50%; left: 50%; width: 90%; height: 90%; max-width: 800px;
+            background: url('./logo.png') no-repeat center; background-size: contain;
+            transform: translate(-50%, -50%); opacity: 0.15; z-index: -1; pointer-events: none;
         }
+        header { background: #2c3e50; color: white; padding: 15px; text-align: center; border-radius: 0 0 25px 25px; }
+        .banner-total { background: #d63384; padding: 15px; border-radius: 15px; margin: 10px auto; width: 85%; }
+        .tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
+        .tabs button { padding: 12px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; cursor: pointer; }
+        .tabs button.active { background: #d63384 !important; }
+        .card { background: rgba(255,255,255,0.7); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; margin-bottom: 15px; }
+        .lista-item { background: rgba(255,255,255,0.8); border-radius: 15px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-sync { background: #d63384; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; width: 45px; height: 45px; }
+        .loading { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .sin-stock { opacity: 0.6; filter: grayscale(1); }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 0.8rem; font-weight: bold; color: #d63384; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
+        #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff0f5; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+    </style>
+</head>
+<body>
+    <div id="splash-screen">
+        <img src="./logo.png" alt="Logo" style="width:180px;">
+        <h2 style="color: #d63384;">Amare Beauty</h2>
+    </div>
 
-        alert("¡Venta registrada!");
-        cargarDesdeDrive(); 
-        switchTab('inventario');
-    } catch (e) { alert("Error de conexión."); }
-}
+    <header>
+        <h1>Amare Beauty</h1>
+        <div class="banner-total">
+            <small>VENTA TOTAL REAL</small>
+            <h2 id="gran-total-dinero" style="margin:5px 0;">$0</h2>
+        </div>
+        <nav class="tabs">
+            <button onclick="switchTab('inventario')" id="tab-inventario" class="active">📦 Inventario</button>
+            <button onclick="switchTab('ventas')" id="tab-ventas">💰 Ventas</button>
+            <button onclick="switchTab('stats')" id="tab-stats">📊 Reportes</button>
+            <button onclick="switchTab('catalogo')" id="tab-catalogo">📖 Catálogo</button>
+        </nav>
+    </header>
 
-function calcularVentasTotales() {
-    const total = inventario.reduce((sum, p) => sum + (parseFloat(p.precio) * (parseFloat(p.vendidos) || 0)), 0);
-    document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
-}
+    <main style="padding: 15px;">
+        <section id="sec-inventario" class="tab-content">
+            <div style="display:flex; gap:10px; align-items: center; margin-bottom:15px;">
+                <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrarProductos()">
+                <button onclick="cargarDesdeDrive()" class="btn-sync" id="btn-sync-icon">🔄</button>
+            </div>
+            <div id="lista-inventario"></div>
+        </section>
 
-function switchTab(t) {
-    document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
-    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-    document.getElementById('sec-' + t).style.display = 'block';
-    document.getElementById('tab-' + t).classList.add('active');
-}
+        <section id="sec-ventas" class="tab-content" style="display:none;">
+            <div class="card">
+                <div class="input-group">
+                    <label>PRODUCTO</label>
+                    <input type="text" id="busqueda-venta" placeholder="Filtrar..." onkeyup="filtrarSelectVentas()">
+                    <select id="select-producto" size="4" style="margin-top:10px;"></select>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div class="input-group" style="width:40%;">
+                        <label>CANTIDAD</label>
+                        <input type="number" id="cant-venta" value="1" min="1">
+                    </div>
+                    <div class="input-group" style="width:60%;">
+                        <label>PAGO</label>
+                        <select id="metodo-pago">
+                            <option value="💵 Efectivo">Efectivo</option>
+                            <option value="📲 Transferencia">Transferencia</option>
+                            <option value="⏳ Separado">Separado</option>
+                            <option value="🛑 Fiado">Fiado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>CLIENTE</label>
+                    <input type="text" id="nombre-cliente" placeholder="Nombre">
+                    <input type="tel" id="tel-cliente" placeholder="WhatsApp" style="margin-top:10px;">
+                </div>
+                <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:12px; font-weight:bold;">REGISTRAR VENTA</button>
+            </div>
+        </section>
 
-function filtrarProductos() {
-    const txt = document.getElementById('busqueda').value.toLowerCase();
-    document.querySelectorAll('.lista-item').forEach(it => {
-        it.style.display = it.innerText.toLowerCase().includes(txt) ? 'flex' : 'none';
-    });
-}
+        <section id="sec-stats" class="tab-content" style="display:none;">
+            <div class="card"><canvas id="canvasMetodos"></canvas></div>
+        </section>
 
-function filtrarSelectVentas() {
-    const txt = document.getElementById('busqueda-venta').value.toLowerCase();
-    document.getElementById('select-producto').innerHTML = inventario
-        .filter(p => p.nombre.toLowerCase().includes(txt))
-        .map(p => {
-            const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
-            return `<option value="${p.filaOriginal}" ${stockActual <= 0 ? 'disabled' : ''}>${p.nombre} (${stockActual <= 0 ? 'AGOTADO' : '$' + parseFloat(p.precio).toLocaleString()})</option>`;
-        }).join('');
-}
-
-function irAVenta(fila, nombre) {
-    switchTab('ventas');
-    document.getElementById('busqueda-venta').value = nombre;
-    filtrarSelectVentas();
-    document.getElementById('select-producto').value = fila;
-}
-
-function verCatalogo() { window.open(URL_CATALOGO, '_blank'); }
-
-window.onload = cargarDesdeDrive;
+        <section id="sec-catalogo" class="tab-content" style="display:none;">
+            <div class="card" style="text-align:center;">
+                <button onclick="verCatalogo()" style="width:100%; padding:15px; background:#6610f2; color:white; border:none; border-radius:10px; font-weight:bold;">ABRIR CATÁLOGO</button>
+                <hr style="margin:20px 0; border:0; border-top:1px solid #ddd;">
+                <h3>Marketing Masivo</h3>
+                <button onclick="marketingMasivo()" style="width:100%; padding:12px; background:#25d366; color:white; border:none; border-radius:10px; font-weight:bold; margin-bottom:15px;">ENVIAR CATÁLOGO A TODOS</button>
+                <div id="lista-clientes-marketing" style="text-align:left;"></div>
+            </div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
