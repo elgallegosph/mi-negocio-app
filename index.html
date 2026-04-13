@@ -9,7 +9,6 @@
     <style>
         body { background-color: #fff0f5; margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
         
-        /* Marca de agua gigante */
         body::before {
             content: ""; position: fixed; top: 50%; left: 50%;
             width: 90%; height: 90%; max-width: 800px;
@@ -23,7 +22,6 @@
         .banner-total { 
             background: linear-gradient(45deg, #d63384, #e83e8c); 
             padding: 15px; border-radius: 15px; margin: 10px auto; width: 85%; 
-            box-shadow: 0 4px 15px rgba(214, 51, 132, 0.3);
         }
 
         .tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
@@ -33,7 +31,6 @@
         }
         .tabs button.active { background: #d63384 !important; }
 
-        .tab-content { padding: 15px; }
         .card { 
             background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px);
             border-radius: 20px; padding: 20px; margin-bottom: 15px;
@@ -42,10 +39,22 @@
         .lista-item { 
             background: rgba(255, 255, 255, 0.8); border-radius: 15px; padding: 15px; 
             margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
-        .btn-sync { background: #d63384; color: white; border: none; padding: 12px; border-radius: 50%; cursor: pointer; width: 45px; height: 45px; }
+        /* Animación de Carga */
+        .btn-sync { 
+            background: #d63384; color: white; border: none; padding: 10px; 
+            border-radius: 50%; cursor: pointer; width: 45px; height: 45px;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.3s;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .loading { animation: spin 1s linear infinite; }
+
         .price-tag { color: #d63384; font-weight: 800; font-size: 1.2rem; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
         
@@ -63,10 +72,10 @@
     </div>
 
     <header>
-        <h1 style="margin:0; font-size: 1.5rem;">Amare Beauty</h1>
+        <h1 style="margin:0;">Amare Beauty</h1>
         <div class="banner-total">
-            <small style="opacity: 0.9;">VENTA TOTAL REAL (RECAUDADO)</small>
-            <h2 id="gran-total-dinero" style="margin:5px 0; font-size: 1.8rem;">$0</h2>
+            <small>VENTA TOTAL REAL</small>
+            <h2 id="gran-total-dinero" style="margin:5px 0;">$0</h2>
         </div>
         <nav class="tabs">
             <button onclick="switchTab('inventario')" id="tab-inventario" class="active">📦 Inventario</button>
@@ -76,11 +85,11 @@
         </nav>
     </header>
 
-    <main>
+    <main style="padding: 15px;">
         <section id="sec-inventario" class="tab-content">
             <div style="display:flex; gap:10px; align-items: center; margin-bottom:15px;">
                 <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()" style="margin:0;">
-                <button onclick="cargarDesdeDrive()" class="btn-sync" id="btn-sync-main">🔄</button>
+                <button onclick="cargarDesdeDrive()" class="btn-sync" id="btn-sync-icon">🔄</button>
             </div>
             <div id="lista-inventario"></div>
         </section>
@@ -99,14 +108,14 @@
                     </select>
                 </div>
                 <input type="text" id="nombre-cliente" placeholder="Nombre cliente">
-                <input type="tel" id="tel-cliente" placeholder="WhatsApp (ej: 300...)">
-                <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:12px; font-weight:bold; margin-top:10px;">REGISTRAR VENTA</button>
+                <input type="tel" id="tel-cliente" placeholder="WhatsApp">
+                <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:12px; font-weight:bold;">REGISTRAR VENTA</button>
             </div>
         </section>
 
         <section id="sec-stats" class="tab-content" style="display:none;">
             <div class="card">
-                <h3 style="text-align:center; color:#d63384;">Resumen por Métodos</h3>
+                <h3 style="text-align:center;">Métodos de Pago</h3>
                 <canvas id="canvasMetodos"></canvas>
             </div>
         </section>
@@ -114,7 +123,7 @@
         <section id="sec-catalogo" class="tab-content" style="display:none;">
             <div class="card" style="text-align:center;">
                 <button onclick="verCatalogo()" style="width:100%; padding:15px; background:#6610f2; color:white; border:none; border-radius:10px; margin-bottom:15px;">VER CATÁLOGO</button>
-                <button onclick="enviarMarketingMasivo()" style="width:100%; padding:15px; background:#25d366; color:white; border:none; border-radius:10px;">COMPARTIR CATÁLOGO</button>
+                <button onclick="enviarMarketingMasivo()" style="width:100%; padding:15px; background:#25d366; color:white; border:none; border-radius:10px;">COMPARTIR Y REGISTRAR</button>
             </div>
         </section>
     </main>
