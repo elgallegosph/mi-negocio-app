@@ -25,11 +25,11 @@ async function cargarDesdeDrive() {
         
         if(icon) icon.classList.remove('loading');
         document.getElementById('splash-screen').style.display = 'none';
-    } catch (e) { console.error("Error:", e); }
+    } catch (e) { console.error(e); }
 }
 
 function calcularVentasTotales() {
-    // Se asegura de que cada valor sea numérico para evitar el "error" en el total
+    // Cálculo seguro del total real
     const total = inventario.reduce((sum, p) => {
         const precio = parseFloat(p.precio) || 0;
         const vendidos = parseFloat(p.vendidos) || 0;
@@ -65,7 +65,6 @@ function switchTab(t) {
     document.getElementById('sec-' + t).style.display = 'block';
     document.getElementById('tab-' + t).classList.add('active');
     
-    // Actualización automática al navegar
     cargarDesdeDrive(); 
     if(t === 'stats') setTimeout(dibujarGraficos, 600);
 }
@@ -108,7 +107,7 @@ async function registrarVenta() {
     const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
     const cantidad = parseInt(document.getElementById('cant-venta').value);
 
-    if (cantidad > stockActual) return alert("Sin stock suficiente");
+    if (cantidad > stockActual) return alert("Stock insuficiente");
 
     const metodo = document.getElementById('metodo-pago').value;
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
@@ -138,45 +137,78 @@ async function generarFacturaProfesional(datos) {
     const doc = new jsPDF();
     const imgData = await getBase64Image(LOGO_URL);
     
+    // Configuración de Marca de Agua Centrada
     if (imgData) {
         doc.saveGraphicsState();
         doc.setGState(new doc.GState({opacity: 0.08}));
-        doc.addImage(imgData, 'PNG', 45, 80, 120, 120); // Marca de agua
+        doc.addImage(imgData, 'PNG', 45, 80, 120, 120); 
         doc.restoreGraphicsState();
-        doc.addImage(imgData, 'PNG', 15, 15, 25, 25); // Logo esquina
+        doc.addImage(imgData, 'PNG', 15, 12, 25, 25); // Mini logo arriba
     }
 
+    // Cabecera Profesional
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(214, 51, 132); // Rosa Amare
+    doc.setFontSize(24);
+    doc.text("AMARE BEAUTY", 200, 25, { align: "right" });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.setFont("helvetica", "normal");
+    doc.text("RECIBO OFICIAL DE VENTA", 200, 31, { align: "right" });
+    doc.text("📍 San José, Caldas", 200, 36, { align: "right" });
+
+    // Línea divisoria
+    doc.setDrawColor(214, 51, 132);
+    doc.setLineWidth(0.5);
+    doc.line(15, 45, 200, 45);
+
+    // Información del Cliente
+    doc.setTextColor(50);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("DATOS DE LA VENTA", 15, 55);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 62);
+    doc.text(`Cliente: ${datos.cliente}`, 15, 68);
+    doc.text(`Método de Pago: ${datos.metodo}`, 15, 74);
+
+    // Tabla de Productos con Estilo Profesional
+    doc.setFillColor(214, 51, 132);
+    doc.rect(15, 85, 185, 10, 'F');
+    doc.setTextColor(255);
+    doc.setFont("helvetica", "bold");
+    doc.text("DESCRIPCIÓN DEL PRODUCTO", 20, 92);
+    doc.text("CANT", 130, 92);
+    doc.text("PRECIO UNIT.", 150, 92);
+    doc.text("TOTAL", 185, 92, { align: "right" });
+
+    // Fila de producto
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "normal");
+    doc.text(datos.producto, 20, 105);
+    doc.text(datos.cantidad.toString(), 133, 105);
+    doc.text(`$${parseFloat(datos.precioU).toLocaleString()}`, 150, 105);
+    doc.text(`$${datos.total.toLocaleString()}`, 195, 105, { align: "right" });
+
+    // Línea de Cierre y Total
+    doc.setDrawColor(200);
+    doc.line(15, 115, 200, 115);
+    
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(214, 51, 132);
-    doc.setFontSize(22);
-    doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
-    doc.setFontSize(10);
-    doc.setTextColor(80);
-    doc.text("RECIBO DE VENTA", 195, 32, { align: "right" });
-    doc.setDrawColor(214, 51, 132);
-    doc.line(15, 45, 195, 45);
+    doc.text(`TOTAL A PAGAR: $${datos.total.toLocaleString()}`, 200, 128, { align: "right" });
 
-    doc.setTextColor(0);
-    doc.setFontSize(11);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 55);
-    doc.text(`Cliente: ${datos.cliente}`, 15, 62);
-    doc.text(`Pago: ${datos.metodo}`, 15, 69);
+    // Pie de página
+    doc.setFontSize(9);
+    doc.setTextColor(150);
+    doc.setFont("helvetica", "italic");
+    doc.text("¡Gracias por preferir Amare Beauty!", 107, 160, { align: "center" });
+    doc.text("Este documento es un soporte de pago virtual.", 107, 165, { align: "center" });
 
-    doc.setFillColor(245, 245, 245);
-    doc.rect(15, 80, 180, 10, 'F');
-    doc.text("Producto", 20, 87);
-    doc.text("Cant.", 110, 87);
-    doc.text("Total", 175, 87);
-
-    doc.setFont("helvetica", "normal");
-    doc.text(datos.producto, 20, 98);
-    doc.text(datos.cantidad.toString(), 115, 98);
-    doc.text(`$${datos.total.toLocaleString()}`, 175, 98);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(`TOTAL: $${datos.total.toLocaleString()}`, 195, 120, { align: "right" });
-    doc.save(`Recibo_Amare_${datos.cliente}.pdf`);
+    doc.save(`Recibo_Amare_${datos.cliente.replace(/\s/g, '_')}.pdf`);
 }
 
 async function getBase64Image(url) {
@@ -204,7 +236,7 @@ function renderClientes() {
 }
 
 function marketingIndividual(tel, nombre) {
-    const msj = `¡Hola ${nombre}! ✨ Te enviamos nuestro catálogo de *Amare Beauty*: ${URL_CATALOGO}`;
+    const msj = `¡Hola ${nombre}! ✨ Te compartimos nuestro catálogo de *Amare Beauty*: ${URL_CATALOGO}`;
     window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
 }
 
