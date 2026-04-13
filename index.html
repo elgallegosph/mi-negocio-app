@@ -8,11 +8,30 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
+        /* Pantalla de Portada (Splash) */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 9999;
+            transition: opacity 1s ease, visibility 1s;
+        }
+        #splash-screen img { width: 200px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* Marca de Agua de Fondo */
+        body::before {
+            content: ""; position: fixed; top: 50%; left: 50%;
+            width: 80%; height: 80%; max-width: 500px;
+            background: url('./logo.png') no-repeat center;
+            background-size: contain; transform: translate(-50%, -50%);
+            opacity: 0.05; z-index: -1; pointer-events: none;
+        }
+
         .price-tag { font-size: 1.4rem; color: #d63384; font-weight: 800; display: block; margin-top: 4px; }
         .product-name { font-size: 1.1rem; font-weight: 600; color: #333; }
         .lista-item { 
             display: flex; justify-content: space-between; align-items: center;
-            padding: 15px; border-bottom: 1px solid #eee; background: white;
+            padding: 15px; border-bottom: 1px solid #eee; background: rgba(255, 255, 255, 0.8);
             margin-bottom: 8px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             cursor: pointer; transition: background 0.2s;
         }
@@ -20,11 +39,15 @@
         .chart-container { position: relative; height: 300px; width: 100%; }
         .search-sales { width: 100%; padding: 12px; margin-bottom: 8px; border: 2px solid #fce4ec; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
         .btn-disabled { background: #ccc !important; cursor: not-allowed !important; }
-        .catalog-card { background: white; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 20px; }
-        .marketing-section { margin-top: 30px; border-top: 2px dashed #ddd; padding-top: 20px; }
+        .catalog-card { background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 20px; }
     </style>
 </head>
 <body>
+    <div id="splash-screen">
+        <img src="./logo.png" alt="Amare Beauty Logo">
+        <h1 style="color: #d63384; margin-top: 20px;">Cargando...</h1>
+    </div>
+
     <div class="app-container">
         <header>
             <h1>Amare Beauty</h1>
@@ -89,7 +112,7 @@
                     <p>Visualiza el PDF actual o compártelo con tus clientes.</p>
                     <button onclick="verCatalogo()" class="btn-save" style="background: #6610f2; width: auto; padding: 15px 30px; margin-bottom: 10px;">VER PDF ACTUAL</button>
                     
-                    <div class="marketing-section">
+                    <div class="marketing-section" style="margin-top: 30px; border-top: 2px dashed #ddd; padding-top: 20px;">
                         <h3 style="color: #25d366;">🚀 Marketing de WhatsApp</h3>
                         <p style="font-size: 0.9rem; color: #666;">Envía el catálogo a todos tus clientes registrados automáticamente.</p>
                         <button onclick="enviarMarketingMasivo()" class="btn-save" style="background: #25d366; border: none;">ENVIAR CATÁLOGO A CLIENTES</button>
