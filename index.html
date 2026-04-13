@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amare Beauty - Dashboard</title>
+    <title>Amare Beauty - Dashboard Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -16,18 +16,18 @@
         header { background: #2c3e50; color: white; padding: 15px; text-align: center; border-radius: 0 0 25px 25px; }
         .banner-total { background: #d63384; padding: 15px; border-radius: 15px; margin: 10px auto; width: 85%; box-shadow: 0 4px 10px rgba(214,51,132,0.3); }
         .tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
-        .tabs button { padding: 12px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; cursor: pointer; }
+        .tabs button { padding: 12px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: 0.3s; }
         .tabs button.active { background: #d63384 !important; }
-        .card { background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-radius: 20px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border-radius: 20px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .lista-item { background: white; border-radius: 15px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #fce4ec; }
         .btn-sync { background: #d63384; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; width: 45px; height: 45px; }
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
-        .tabla-seccion { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-        .tabla-seccion th { background: #fce4ec; color: #d63384; padding: 8px; text-align: left; }
-        .tabla-seccion td { padding: 8px; border-bottom: 1px solid #eee; }
-        .btn-accion { padding: 5px 10px; border-radius: 5px; border: none; color: white; cursor: pointer; font-size: 0.75rem; }
+        input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; font-size: 1rem; }
+        .tabla-gestion { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .tabla-gestion th { background: #fce4ec; color: #d63384; padding: 10px; text-align: left; font-size: 0.8rem; }
+        .tabla-gestion td { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+        .btn-accion { padding: 6px 10px; border-radius: 8px; border: none; color: white; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
         #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff0f5; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
     </style>
 </head>
@@ -36,19 +36,19 @@
 
     <header>
         <h1>Amare Beauty</h1>
-        <div class="banner-total"><small>VENTA TOTAL REAL</small><h2 id="gran-total-dinero">$0</h2></div>
+        <div class="banner-total"><small>VENTA TOTAL REAL</small><h2 id="gran-total-dinero" style="margin:5px 0;">$0</h2></div>
         <nav class="tabs">
-            <button onclick="switchTab('inventario')" id="tab-inventario" class="active">📦 Stock</button>
-            <button onclick="switchTab('ventas')" id="tab-ventas">💰 Venta</button>
-            <button onclick="switchTab('stats')" id="tab-stats">📊 Reporte</button>
-            <button onclick="switchTab('catalogo')" id="tab-catalogo">📖 Gestión</button>
+            <button onclick="switchTab('inventario')" id="tab-inventario" class="active">📦 Inventario</button>
+            <button onclick="switchTab('ventas')" id="tab-ventas">💰 Vender</button>
+            <button onclick="switchTab('stats')" id="tab-stats">📊 Reportes</button>
+            <button onclick="switchTab('catalogo')" id="tab-catalogo">⚙️ Gestión</button>
         </nav>
     </header>
 
     <main style="padding: 15px;">
         <section id="sec-inventario" class="tab-content">
-            <div style="display:flex; gap:10px; margin-bottom:15px;">
-                <input type="text" id="busqueda" placeholder="Buscar..." onkeyup="filtrarProductos()">
+            <div style="display:flex; gap:10px; align-items: center; margin-bottom:15px;">
+                <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()">
                 <button onclick="cargarDesdeDrive()" class="btn-sync" id="btn-sync-icon">🔄</button>
             </div>
             <div id="lista-inventario"></div>
@@ -56,7 +56,8 @@
 
         <section id="sec-ventas" class="tab-content" style="display:none;">
             <div class="card">
-                <input type="text" id="busqueda-venta" placeholder="Buscar producto..." onkeyup="filtrarSelectVentas()" style="margin-bottom:8px;">
+                <h3 style="color:#d63384; margin-top:0;">Nueva Venta</h3>
+                <input type="text" id="busqueda-venta" placeholder="Escribe para buscar..." onkeyup="filtrarSelectVentas()" style="margin-bottom:8px;">
                 <select id="select-producto" size="4"></select>
                 <div style="display:flex; gap:10px; margin-top:10px;">
                     <input type="number" id="cant-venta" value="1" min="1" style="width:30%;">
@@ -67,26 +68,30 @@
                         <option value="🛑 Fiado">Fiado</option>
                     </select>
                 </div>
-                <input type="text" id="nombre-cliente" placeholder="Nombre Cliente" style="margin-top:10px;">
-                <input type="tel" id="tel-cliente" placeholder="WhatsApp" style="margin-top:10px;">
-                <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:15px; font-weight:bold; margin-top:15px;">REGISTRAR VENTA</button>
+                <input type="text" id="nombre-cliente" placeholder="Nombre del cliente" style="margin-top:10px;">
+                <input type="tel" id="tel-cliente" placeholder="WhatsApp (Ej: 300...)" style="margin-top:10px;">
+                <button onclick="registrarVenta()" style="width:100%; padding:15px; background:#d63384; color:white; border:none; border-radius:15px; font-weight:bold; margin-top:15px;">FINALIZAR VENTA</button>
             </div>
         </section>
 
         <section id="sec-stats" class="tab-content" style="display:none;">
-            <div class="card"><canvas id="canvasMetodos"></canvas></div>
+            <div class="card">
+                <h3 style="text-align:center; color:#2c3e50;">Métodos de Pago Utilizados</h3>
+                <div style="height: 250px;"><canvas id="canvasMetodos"></canvas></div>
+            </div>
         </section>
 
         <section id="sec-catalogo" class="tab-content" style="display:none;">
             <div class="card">
-                <h3 style="color:#d63384; margin-top:0;">🛑 Cuentas por Cobrar (Fiados)</h3>
-                <table class="tabla-seccion"><thead id="head-fiados"></thead><tbody id="lista-fiados"></tbody></table>
+                <h3 style="color:#d63384; margin-top:0;">🛑 Fiados (Pendientes de Cobro)</h3>
+                <table class="tabla-gestion"><thead><tr><th>Cliente / Prod</th><th>Acción</th></tr></thead><tbody id="lista-fiados"></tbody></table>
             </div>
             <div class="card">
-                <h3 style="color:#f1c40f; margin-top:0;">⏳ Pedidos Separados</h3>
-                <table class="tabla-seccion"><thead id="head-separados"></thead><tbody id="lista-separados"></tbody></table>
+                <h3 style="color:#f39c12; margin-top:0;">⏳ Separados (Pendientes)</h3>
+                <table class="tabla-gestion"><thead><tr><th>Cliente / Prod</th><th>Acción</th></tr></thead><tbody id="lista-separados"></tbody></table>
             </div>
             <div class="card" style="text-align:center;">
+                <button onclick="window.open('https://drive.google.com/open?id=1rU759f0_bJVyNa_AM-shqBVrImPWHsOC', '_blank')" style="width:100%; padding:12px; background:#6610f2; color:white; border:none; border-radius:10px; font-weight:bold; margin-bottom:15px;">ABRIR CATÁLOGO VIRTUAL</button>
                 <h3>Marketing Directo</h3>
                 <button onclick="marketingMasivo()" style="width:100%; padding:12px; background:#25d366; color:white; border:none; border-radius:10px; font-weight:bold;">ENVIAR CATÁLOGO A TODOS</button>
             </div>
