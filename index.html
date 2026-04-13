@@ -20,6 +20,7 @@
         .chart-container { position: relative; height: 300px; width: 100%; }
         .search-sales { width: 100%; padding: 12px; margin-bottom: 8px; border: 2px solid #fce4ec; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
         .btn-disabled { background: #ccc !important; cursor: not-allowed !important; }
+        .catalog-card { background: white; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -34,6 +35,7 @@
                 <button onclick="switchTab('inventario')" id="tab-inventario" class="active">Inventario</button>
                 <button onclick="switchTab('ventas')" id="tab-ventas">Ventas</button>
                 <button onclick="switchTab('stats')" id="tab-stats">Estadísticas</button>
+                <button onclick="switchTab('catalogo')" id="tab-catalogo">📖 Catálogo</button>
             </nav>
         </header>
 
@@ -77,6 +79,14 @@
                 <div class="chart-card" style="background:white; padding:15px; border-radius:12px;">
                     <h3 style="text-align:center; color:#6610f2;">🏆 Top 5 Productos</h3>
                     <div class="chart-container"><canvas id="canvasTop5"></canvas></div>
+                </div>
+            </section>
+
+            <section id="sec-catalogo" class="tab-content" style="display:none; padding: 20px;">
+                <div class="catalog-card">
+                    <h2 style="color: #d63384;">Nuestro Catálogo</h2>
+                    <p>Haz clic en el botón de abajo para ver todos nuestros productos disponibles y precios actualizados.</p>
+                    <button onclick="verCatalogo()" class="btn-save" style="background: #6610f2; width: auto; padding: 15px 30px;">ABRIR CATÁLOGO PDF</button>
                 </div>
             </section>
         </main>
