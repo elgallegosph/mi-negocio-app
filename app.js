@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyk02RU9z8hGEJ37DlHxqjQ_s1QKjuGoIr9RrznvaKyKdsqW7__EuYjRUd0zSui4SGyRw/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6sieUtBXpjZ15opdUl1gBJrPFXM6rRCmD6fHHyY6GRB5nV7JFgN0PWf0k8_tkG7Nqag/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
 const URL_CATALOGO = "https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing"; 
@@ -7,31 +7,56 @@ let inventario = [];
 let historial = [];
 let charts = {};
 
+// FUNCIÓN DE CARGA PRINCIPAL (Auto-ejecutable al inicio)
 async function cargarDesdeDrive() {
+    const btnSync = document.getElementById('btn-sync-main');
+    if(btnSync) btnSync.style.animation = "rotate 1s linear infinite";
+    
     try {
         const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
         const data = await response.json();
         inventario = data.inventario || [];
         historial = data.historial || [];
+        
         renderInventario();
-        calcularVentasTotales(); 
+        calcularVentasTotales(); // ESTO CALCULA EL DINERO REAL VENDIDO
         filtrarSelectVentas();
-        document.getElementById('splash-screen').style.display = 'none';
-    } catch (e) { console.error(e); }
+        
+        document.getElementById('splash-screen').style.opacity = '0';
+        setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 500);
+        if(btnSync) btnSync.style.animation = "none";
+    } catch (e) { 
+        console.error(e);
+        if(btnSync) btnSync.style.animation = "none";
+    }
+}
+
+// CÁLCULO DE VENTA REAL (Solo multiplica precio x cantidad ya vendida en Excel)
+function calcularVentasTotales() {
+    const dineroReal = inventario.reduce((sum, p) => {
+        const vendidos = parseFloat(p.vendidos) || 0;
+        const precio = parseFloat(p.precio) || 0;
+        return sum + (vendidos * precio);
+    }, 0);
+    
+    document.getElementById('gran-total-dinero').innerText = `$${dineroReal.toLocaleString('es-CO')}`;
 }
 
 function renderInventario() {
     const contenedor = document.getElementById('lista-inventario');
-    contenedor.innerHTML = inventario.map(p => `
-        <div class="lista-item">
-            <div>
-                <strong>${p.nombre}</strong><br>
-                <small>Disp: ${(p.stock - p.vendidos)}</small>
-                <div class="price-tag">$${parseFloat(p.precio).toLocaleString()}</div>
+    contenedor.innerHTML = inventario.map(p => {
+        const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        return `
+            <div class="lista-item">
+                <div>
+                    <strong>${p.nombre}</strong><br>
+                    <small>Disponibles: ${stockActual}</small>
+                    <div class="price-tag">$${parseFloat(p.precio).toLocaleString()}</div>
+                </div>
+                <button onclick="irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')" style="background:#d63384; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold;">VENDER</button>
             </div>
-            <button onclick="irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')" style="background:#d63384; color:white; border:none; padding:10px; border-radius:10px;">VENDER</button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function irAVenta(fila, nombre) {
@@ -44,7 +69,7 @@ function irAVenta(fila, nombre) {
 async function registrarVenta() {
     const select = document.getElementById('select-producto');
     const fila = select.value;
-    if (!fila) return alert("Selecciona producto");
+    if (!fila) return alert("Selecciona un producto");
 
     const p = inventario.find(item => item.filaOriginal == fila);
     const cantidad = parseInt(document.getElementById('cant-venta').value);
@@ -54,29 +79,28 @@ async function registrarVenta() {
     const totalVenta = parseFloat(p.precio) * cantidad;
 
     try {
+        // Enviar a Drive
         await fetch(SCRIPT_URL, {
             method: 'POST', mode: 'no-cors',
-            body: JSON.stringify({ 
-                action: "venta", fila: parseInt(fila), productoNombre: p.nombre, cantidad, metodo, cliente, telefono: tel 
-            })
+            body: JSON.stringify({ action: "venta", fila: parseInt(fila), productoNombre: p.nombre, cantidad, metodo, cliente, telefono: tel })
         });
 
-        // WHATSAPP SEGÚN MÉTODO
+        // WhatsApp Inteligente
         if (tel.length >= 10) {
-            let mensaje;
-            if (metodo === "Efectivo" || metodo === "Transferencia") {
-                mensaje = `¡Hola ${cliente}! ✨ Gracias por tu compra en *Amare Beauty*. ❤️\n\n🛍️ *Producto:* ${p.nombre}\n💰 *Total:* $${totalVenta.toLocaleString()}\n✅ *Estado:* Pagado (${metodo})`;
-            } else {
-                mensaje = `¡Hola ${cliente}! ✨ Tu pedido en *Amare Beauty* ha sido registrado. 📦\n\n🛍️ *Producto:* ${p.nombre}\n💰 *Total:* $${totalVenta.toLocaleString()}\n📝 *Estado:* Pendiente (${metodo})\n\nRecuerda ponerte al día con tu pago. ¡Gracias!`;
-            }
-            window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(mensaje)}`, '_blank');
+            let msj = (metodo === "Fiado" || metodo === "Separado") 
+                ? `¡Hola ${cliente}! ✨ Tu pedido de *${p.nombre}* ha sido registrado. 📝 Total: $${totalVenta.toLocaleString()}. Queda pendiente por (${metodo}). ¡Gracias!`
+                : `¡Hola ${cliente}! ✨ Gracias por tu compra de *${p.nombre}*. ❤️ Total: $${totalVenta.toLocaleString()}. Pagado con (${metodo}). ¡Vuelve pronto!`;
+            
+            window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
         }
 
         await generarPDF({ cliente, producto: p.nombre, cantidad, total: totalVenta, metodo });
-        alert("Venta registrada con éxito");
-        cargarDesdeDrive();
+        
+        // ACTUALIZACIÓN AUTOMÁTICA DESPUÉS DE VENDER
+        alert("Venta registrada. Actualizando datos...");
+        cargarDesdeDrive(); 
         switchTab('inventario');
-    } catch (e) { alert("Error"); }
+    } catch (e) { alert("Error al registrar venta"); }
 }
 
 async function getBase64Image(url) {
@@ -99,16 +123,13 @@ async function generarPDF(datos) {
     const doc = new jsPDF();
     const imgData = await getBase64Image(LOGO_URL);
 
-    if (imgData) {
-        doc.addImage(imgData, 'PNG', 15, 10, 30, 30); // Logo en la esquina
-    }
-
+    if (imgData) doc.addImage(imgData, 'PNG', 15, 10, 30, 30);
+    
     doc.setTextColor(214, 51, 132);
     doc.setFontSize(22);
     doc.text("AMARE BEAUTY", 195, 25, { align: "right" });
     
-    doc.setFontSize(12);
-    doc.setTextColor(0);
+    doc.setFontSize(12); doc.setTextColor(0);
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 50);
     doc.text(`Cliente: ${datos.cliente}`, 15, 60);
     doc.text(`Producto: ${datos.producto}`, 15, 70);
@@ -118,7 +139,7 @@ async function generarPDF(datos) {
     doc.setFontSize(12);
     doc.text(`Método: ${datos.metodo}`, 15, 105);
 
-    doc.save(`Recibo_Amare_${datos.cliente}.pdf`);
+    doc.save(`Factura_${datos.cliente}.pdf`);
 }
 
 function switchTab(t) {
@@ -137,11 +158,6 @@ function dibujarGraficos() {
         type: 'doughnut',
         data: { labels: Object.keys(stats), datasets: [{ data: Object.values(stats), backgroundColor: ['#d63384', '#3498db', '#f1c40f', '#2ecc71'] }] }
     });
-}
-
-function calcularVentasTotales() {
-    const total = inventario.reduce((sum, p) => sum + (parseFloat(p.precio) * p.vendidos), 0);
-    document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
 }
 
 function filtrarSelectVentas() {
@@ -163,4 +179,5 @@ function enviarMarketingMasivo() {
     window.open(`https://wa.me/?text=${encodeURIComponent('✨ ¡Hola! Mira nuestro catálogo de Amare Beauty aquí: ' + URL_CATALOGO)}`, '_blank');
 }
 
+// INICIO AUTOMÁTICO
 window.onload = cargarDesdeDrive;
