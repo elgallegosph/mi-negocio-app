@@ -41,11 +41,11 @@ function renderInventario() {
             <div class="lista-item ${agotado ? 'sin-stock' : ''}">
                 <div>
                     <strong style="font-size:1.1rem;">${p.nombre}</strong><br>
-                    <small style="color:${agotado ? 'red' : '#666'}">${agotado ? '❌ AGOTADO' : 'Disponibles: ' + stockActual}</small><br>
+                    <small style="color:${agotado ? 'red' : '#666'}">${agotado ? '❌ AGOTADO' : 'Stock: ' + stockActual}</small><br>
                     <span style="color:var(--primary); font-weight:800; font-size:1.1rem;">$${parseFloat(p.precio).toLocaleString()}</span>
                 </div>
                 <button onclick="irAVenta('${p.filaOriginal}', '${p.nombre.replace(/'/g, "\\'")}')" 
-                style="background:${agotado ? '#bdc3c7' : 'var(--primary)'}; color:white; border:none; padding:10px 18px; border-radius:12px; font-weight:bold; cursor:pointer;" ${agotado ? 'disabled' : ''}>
+                style="background:${agotado ? '#bdc3c7' : 'var(--primary)'}; color:white; border:none; padding:10px 18px; border-radius:12px; font-weight:bold;" ${agotado ? 'disabled' : ''}>
                     ${agotado ? 'N/A' : 'VENDER'}
                 </button>
             </div>`;
@@ -77,15 +77,13 @@ async function registrarVenta() {
 
     await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "venta", fila: parseInt(fila), productoNombre: p.nombre, cantidad, metodo, cliente, telefono: tel }) });
     
-    // Generar PDF
     await generarFactura(cliente, p.nombre, cantidad, (p.precio * cantidad), metodo, p.precio);
     
-    // Enviar WhatsApp Profesional según método
     if (tel.length >= 10) {
         enviarWhatsApp(tel, cliente, p.nombre, 'venta', metodo);
     }
 
-    alert("¡Registro exitoso!");
+    alert("¡Venta registrada!");
     await cargarDesdeDrive();
     switchTab('inventario');
 }
@@ -98,10 +96,10 @@ function enviarWhatsApp(tel, nombre, producto, tipo, metodo = "") {
         } else if (metodo.includes("Separado")) {
             msj = `¡Hola ${nombre}! ✨ Tu producto *${producto}* ha sido SEPARADO exitosamente en *Amare Beauty*. Recuerda completar el pago para la entrega final. 🌸`;
         } else {
-            msj = `¡Hola ${nombre}! 🌸 Muchas gracias por tu compra de *${producto}* en *Amare Beauty*. Es un gusto atenderte. ¡Espero que lo disfrutes! ✨`;
+            msj = `¡Hola ${nombre}! 🌸 Muchas gracias por tu compra de *${producto}* en *Amare Beauty*. ¡Espero que lo disfrutes! ✨`;
         }
     } else if (tipo === 'cobro') {
-        msj = `Hola ${nombre} 🌸, te saludamos de *Amare Beauty* para recordarte el pago pendiente de tu producto *${producto}*. ¡Quedamos atentos, muchas gracias! ✨`;
+        msj = `Hola ${nombre} 🌸, recordatorio de pago pendiente en *Amare Beauty* de tu producto: *${producto}*. ✨`;
     }
     window.open(`https://wa.me/${CODIGO_PAIS}${tel}?text=${encodeURIComponent(msj)}`, '_blank');
 }
@@ -118,11 +116,11 @@ async function generarFactura(c, prod, cant, tot, met, pu) {
     }
     doc.setFont("helvetica", "bold"); doc.setTextColor(214, 51, 132); doc.setFontSize(24);
     doc.text("AMARE BEAUTY", 200, 25, {align:"right"});
-    doc.setFontSize(10); doc.setTextColor(100); doc.text("COMPROBANTE DE OPERACIÓN", 200, 32, {align:"right"});
+    doc.setFontSize(10); doc.setTextColor(100); doc.text("COMPROBANTE ELECTRÓNICO", 200, 32, {align:"right"});
     doc.line(15, 45, 200, 45);
-    doc.setTextColor(0); doc.text(`CLIENTE: ${c.toUpperCase()}`, 15, 60); doc.text(`MÉTODO: ${met}`, 15, 68); doc.text(`FECHA: ${new Date().toLocaleDateString()}`, 15, 76);
+    doc.setTextColor(0); doc.text(`CLIENTE: ${c.toUpperCase()}`, 15, 60); doc.text(`MÉTODO: ${met}`, 15, 68);
     doc.setFillColor(214, 51, 132); doc.rect(15, 85, 185, 10, 'F');
-    doc.setTextColor(255); doc.text("DETALLE DEL PRODUCTO", 20, 92); doc.text("CANT", 130, 92); doc.text("SUBTOTAL", 195, 92, {align:"right"});
+    doc.setTextColor(255); doc.text("PRODUCTO", 20, 92); doc.text("CANT", 130, 92); doc.text("TOTAL", 195, 92, {align:"right"});
     doc.setTextColor(0); doc.text(prod, 20, 105); doc.text(cant.toString(), 133, 105); doc.text(`$${tot.toLocaleString()}`, 195, 105, {align:"right"});
     doc.setFontSize(18); doc.setTextColor(214, 51, 132); doc.text(`TOTAL: $${tot.toLocaleString()}`, 200, 130, {align:"right"});
     doc.save(`Recibo_Amare_${c}.pdf`);
@@ -149,7 +147,7 @@ function dibujarGraficos() {
     const ctx = document.getElementById('canvasMetodos');
     if (charts.m) charts.m.destroy();
     const stats = historial.reduce((acc, curr) => (acc[curr.metodo] = (acc[curr.metodo] || 0) + 1, acc), {});
-    charts.m = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(stats), datasets: [{ data: Object.values(stats), backgroundColor: ['#d63384', '#3498db', '#f1c40f', '#2ecc71'], borderWidth:0 }] }, options: {plugins:{legend:{position:'bottom'}}} });
+    charts.m = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(stats), datasets: [{ data: Object.values(stats), backgroundColor: ['#d63384', '#3498db', '#f1c40f', '#2ecc71'], borderWidth:0 }] } });
 }
 
 function filtrarSelectVentas() {
@@ -159,7 +157,7 @@ function filtrarSelectVentas() {
         .map(p => {
             const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
             const agotado = stockActual <= 0;
-            return `<option value="${p.filaOriginal}" ${agotado ? 'disabled' : ''}>${p.nombre} ${agotado ? '(AGOTADO)' : '- $' + parseFloat(p.precio).toLocaleString()}</option>`;
+            return `<option value="${p.filaOriginal}" ${agotado ? 'disabled' : ''}>${p.nombre} ${agotado ? '(SIN STOCK)' : '- $' + parseFloat(p.precio).toLocaleString()}</option>`;
         }).join('');
 }
 
@@ -170,13 +168,13 @@ function filtrarProductos() {
 
 function marketingMasivo() {
     clientes.forEach((c, i) => setTimeout(() => {
-        const msj = `¡Hola ${c.nombre} ✨! Te invitamos a conocer lo nuevo en *Amare Beauty*. Mira nuestro catálogo aquí: https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing`;
+        const msj = `¡Hola ${c.nombre} ✨! Mira nuestro catálogo: https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing`;
         window.open(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`, '_blank');
     }, i * 2800));
 }
 
 async function cancelarVenta(filaLog, filaOriginal, cantidad) {
-    if(!confirm("¿Anular separado y devolver al stock?")) return;
+    if(!confirm("¿Anular separado?")) return;
     await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "cancelar", filaLog, filaOriginal, cantidad }) });
     alert("Anulado."); cargarDesdeDrive();
 }
