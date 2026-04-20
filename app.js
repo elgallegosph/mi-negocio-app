@@ -8,14 +8,13 @@ let clientes = [];
 let carrito = [];
 let charts = {};
 
-// 1. SINCRONIZACIÓN AUTOMÁTICA AL CAMBIAR DE PESTAÑA
 async function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     document.getElementById('sec-' + t).style.display = 'block';
     document.getElementById('tab-' + t).classList.add('active');
     
-    // Al navegar, refresca datos automáticamente sin que el usuario haga nada
+    // Sincronización automática al navegar
     await cargarDesdeDrive(); 
     
     if(t === 'stats') dibujarGraficos();
@@ -36,7 +35,6 @@ async function cargarDesdeDrive() {
     } catch (e) { console.error(e); }
 }
 
-// 2. RENDERIZADO CON BLOQUEO ESTRICTO DE STOCK
 function renderInventario() {
     const busc = document.getElementById('busqueda').value.toLowerCase();
     const cont = document.getElementById('lista-inventario');
@@ -45,7 +43,7 @@ function renderInventario() {
         const agotado = stockActual <= 0;
         return `
             <div class="lista-item ${agotado ? 'sin-stock' : ''}">
-                <div><strong>${p.nombre}</strong><br><small>${agotado ? 'PRODUCTO AGOTADO' : 'Disponibles: ' + stockActual}</small></div>
+                <div><strong>${p.nombre}</strong><br><small>${agotado ? 'AGOTADO' : 'Stock: ' + stockActual}</small></div>
                 <div style="text-align:right">
                     <div style="color:var(--primary); font-weight:bold;">$${p.precio.toLocaleString()}</div>
                     <button onclick="agregarAlCarrito(${p.filaOriginal})" 
@@ -81,9 +79,8 @@ function quitarDelCarrito(i) {
     actualizarCarritoUI();
 }
 
-// 3. REGISTRO Y MENSAJES DE WHATSAPP DIFERENCIADOS
 async function registrarVentaMultiple() {
-    if (carrito.length === 0) return alert("El carrito está vacío");
+    if (carrito.length === 0) return alert("Carrito vacío");
     const btn = document.getElementById('btn-procesar');
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
     const tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
@@ -104,21 +101,20 @@ async function registrarVentaMultiple() {
             let detalle = carrito.map(c => `• ${c.cantidad}x ${c.nombre}`).join('%0A');
             let msj = "";
 
-            // Personalización según el método de pago
             if (metodo.includes("Fiado")) {
-                msj = `Hola ${cliente} 🌸, te envío el detalle de tu compra a crédito en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total Pendiente: $${totalVenta.toLocaleString()}*%0A📌 Por favor, confírmame la fecha estimada de pago. ¡Gracias!`;
+                msj = `Hola ${cliente} 🌸, te envío el detalle de tu compra a crédito en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total Deuda: $${totalVenta.toLocaleString()}*%0A📌 Por favor confírmame la fecha de pago.`;
             } else if (metodo.includes("Separado")) {
-                msj = `Hola ${cliente} 🌸, hemos separado tus productos en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Valor Separado: $${totalVenta.toLocaleString()}*%0A✨ Ya están guardados para ti. Avísanos cuando pases por ellos.`;
+                msj = `Hola ${cliente} 🌸, tus productos han sido separados en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Valor: $${totalVenta.toLocaleString()}*%0A✨ Ya están guardados para ti.`;
             } else {
-                msj = `Hola ${cliente} 🌸, confirmamos tu compra en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A✨ ¡Muchas gracias por elegirnos!`;
+                msj = `Hola ${cliente} 🌸, gracias por tu compra en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A✨ ¡Disfrútalos!`;
             }
 
             setTimeout(() => { window.location.href = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msj}`; }, 1200);
         } else {
-            alert("Venta registrada con éxito.");
+            alert("Venta registrada.");
             window.location.reload();
         }
-    } catch (e) { alert("Error al conectar con la base de datos"); btn.disabled = false; }
+    } catch (e) { alert("Error"); btn.disabled = false; }
 }
 
 async function generarFacturaPDF(cliente, total, metodo) {
@@ -127,10 +123,10 @@ async function generarFacturaPDF(cliente, total, metodo) {
     const img = await getBase64(LOGO_URL);
 
     if(img) {
-        doc.setGState(new doc.GState({opacity: 0.08})); // Marca de agua central transparente
+        doc.setGState(new doc.GState({opacity: 0.08}));
         doc.addImage(img, 'PNG', 40, 70, 130, 130);
         doc.setGState(new doc.GState({opacity: 1}));
-        doc.addImage(img, 'PNG', 15, 15, 25, 25); // Logo esquina
+        doc.addImage(img, 'PNG', 15, 15, 25, 25);
     }
     
     doc.setFont("helvetica", "bold"); doc.setTextColor(214, 51, 132); doc.setFontSize(22);
@@ -138,7 +134,7 @@ async function generarFacturaPDF(cliente, total, metodo) {
     doc.setDrawColor(214, 51, 132); doc.line(15, 45, 200, 45);
     doc.setTextColor(0); doc.setFontSize(12);
     doc.text(`CLIENTE: ${cliente.toUpperCase()}`, 15, 55);
-    doc.text(`MÉTODO DE PAGO: ${metodo}`, 15, 62);
+    doc.text(`MÉTODO: ${metodo}`, 15, 62);
     
     let y = 80;
     doc.setFillColor(245); doc.rect(15, y, 185, 8, 'F');
