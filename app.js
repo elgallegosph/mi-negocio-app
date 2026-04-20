@@ -1,21 +1,27 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxR76QBOUdpf1lJPRLJCy7LtVwumqQ8Kqs6604YGo-1ui9E1_3ANmvcvX6YSFaZdc5l/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwp45_lcFL8BSGvhG4lLthRwi3cU11Lo6m2qJDCIjRBrchO8cQjSDgCdYwZHffd8_7t/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
 
 let inventario = [];
 let historial = [];
+let clientes = [];
 let carrito = [];
 let charts = {};
 
 async function cargarDesdeDrive() {
+    const icon = document.getElementById('btn-sync-icon');
+    if(icon) icon.classList.add('loading');
     try {
         const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
         const data = await response.json();
         inventario = data.inventario || [];
         historial = data.historial || [];
+        clientes = data.clientes || [];
+        
         renderInventario();
         renderTablasGestion();
         calcularVentasTotales();
+        if(icon) icon.classList.remove('loading');
         document.getElementById('splash-screen').style.display = 'none';
     } catch (e) { console.error(e); }
 }
@@ -27,9 +33,9 @@ function renderInventario() {
         const stock = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         return `
             <div class="lista-item">
-                <div><strong>${p.nombre}</strong><br><small>Stock: ${stock}</small></div>
+                <div><strong>${p.nombre}</strong><br><small>Disp: ${stock}</small></div>
                 <div style="text-align:right">
-                    <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">$${p.precio.toLocaleString()}</div>
+                    <div style="color:var(--primary); font-weight:bold;">$${p.precio.toLocaleString()}</div>
                     <button onclick="agregarAlCarrito(${p.filaOriginal})" style="background:var(--primary); color:white; border:none; padding:8px 12px; border-radius:10px; cursor:pointer;">+ Añadir</button>
                 </div>
             </div>`;
@@ -45,16 +51,13 @@ function agregarAlCarrito(fila) {
 }
 
 function actualizarCarritoUI() {
+    document.getElementById('carrito-conteo').innerText = carrito.length;
     const cont = document.getElementById('items-en-carrito');
-    const badge = document.getElementById('carrito-conteo');
-    const vacio = document.getElementById('carrito-vacio');
-    badge.innerText = carrito.length;
-    vacio.style.display = carrito.length === 0 ? 'block' : 'none';
     cont.innerHTML = carrito.map((c, i) => `
         <div class="lista-item" style="font-size:0.9rem;">
             <span>${c.cantidad}x ${c.nombre}</span>
             <span>$${(c.precio * c.cantidad).toLocaleString()} 
-            <button onclick="quitarDelCarrito(${i})" style="color:red; border:none; background:none; margin-left:10px; font-weight:bold; cursor:pointer;">✕</button></span>
+            <button onclick="quitarDelCarrito(${i})" style="color:red; border:none; background:none; font-weight:bold; margin-left:10px;">✕</button></span>
         </div>
     `).join('');
 }
@@ -72,13 +75,11 @@ async function registrarVentaMultiple() {
     const metodo = document.getElementById('metodo-pago').value;
     const totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
-    btn.disabled = true;
-    btn.innerText = "REGISTRANDO...";
+    btn.disabled = true; btn.innerText = "REGISTRANDO...";
 
     try {
         await fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
+            method: 'POST', mode: 'no-cors', 
             body: JSON.stringify({ action: "venta_multiple", productos: carrito, cliente, telefono: tel, metodo }) 
         });
 
@@ -86,10 +87,10 @@ async function registrarVentaMultiple() {
 
         if (tel.length >= 10) {
             let detalle = carrito.map(c => `• ${c.cantidad}x ${c.nombre}`).join('%0A');
-            let msj = `Hola ${cliente} 🌸, gracias por tu compra en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A*Pago:* ${metodo}%0A✨ Tu factura se ha generado correctamente.`;
+            let msj = `Hola ${cliente} 🌸, gracias por comprar en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A*Pago:* ${metodo}%0A✨ Factura adjunta.`;
             setTimeout(() => { window.location.href = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msj}`; }, 1000);
         } else {
-            alert("Venta registrada");
+            alert("Venta registrada con éxito.");
             window.location.reload();
         }
     } catch (e) { alert("Error"); btn.disabled = false; }
@@ -100,26 +101,17 @@ async function generarFacturaPDF(cliente, total, metodo) {
     const doc = new jsPDF();
     const img = await getBase64(LOGO_URL);
 
-    if(img) {
-        doc.setGState(new doc.GState({opacity: 0.05}));
-        doc.addImage(img, 'PNG', 40, 70, 130, 130);
-        doc.setGState(new doc.GState({opacity: 1}));
-        doc.addImage(img, 'PNG', 15, 15, 25, 25);
-    }
-    
+    if(img) doc.addImage(img, 'PNG', 15, 15, 25, 25);
     doc.setFont("helvetica", "bold"); doc.setTextColor(214, 51, 132); doc.setFontSize(22);
     doc.text("AMARE BEAUTY", 200, 25, {align:"right"});
-    doc.setFontSize(10); doc.setTextColor(100); doc.text("COMPROBANTE ELECTRÓNICO", 200, 32, {align:"right"});
     doc.setDrawColor(214, 51, 132); doc.line(15, 45, 200, 45);
-    
     doc.setTextColor(0); doc.setFontSize(12);
     doc.text(`CLIENTE: ${cliente.toUpperCase()}`, 15, 55);
-    doc.text(`FECHA: ${new Date().toLocaleDateString()}`, 15, 62);
-    doc.text(`MÉTODO DE PAGO: ${metodo}`, 15, 69);
+    doc.text(`MÉTODO: ${metodo}`, 15, 62);
     
     let y = 80;
     doc.setFillColor(240); doc.rect(15, y, 185, 8, 'F');
-    doc.setFont("helvetica", "bold"); doc.text("PRODUCTO", 20, y+6); doc.text("CANT", 140, y+6); doc.text("SUBTOTAL", 195, y+6, {align:"right"});
+    doc.text("PRODUCTO", 20, y+6); doc.text("CANT", 140, y+6); doc.text("SUBTOTAL", 195, y+6, {align:"right"});
     
     y += 15;
     doc.setFont("helvetica", "normal");
@@ -130,8 +122,8 @@ async function generarFacturaPDF(cliente, total, metodo) {
         y += 8;
     });
 
-    doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(214, 51, 132);
-    doc.text(`TOTAL A PAGAR: $${total.toLocaleString()}`, 195, y+10, {align:"right"});
+    doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+    doc.text(`TOTAL: $${total.toLocaleString()}`, 195, y+10, {align:"right"});
     doc.save(`Factura_Amare_${cliente}.pdf`);
 }
 
@@ -148,20 +140,14 @@ function switchTab(t) {
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     document.getElementById('sec-' + t).style.display = 'block';
     document.getElementById('tab-' + t).classList.add('active');
-    if(t === 'stats') setTimeout(dibujarGraficos, 300);
+    if(t === 'stats') dibujarGraficos();
 }
 
 function dibujarGraficos() {
     const ctx = document.getElementById('canvasMetodos');
     if (charts.m) charts.m.destroy();
     const stats = historial.reduce((acc, curr) => (acc[curr.metodo] = (acc[curr.metodo] || 0) + 1, acc), {});
-    charts.m = new Chart(ctx, { 
-        type: 'doughnut', 
-        data: { 
-            labels: Object.keys(stats), 
-            datasets: [{ data: Object.values(stats), backgroundColor: ['#d63384', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'] }] 
-        } 
-    });
+    charts.m = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(stats), datasets: [{ data: Object.values(stats), backgroundColor: ['#d63384', '#3498db', '#f1c40f', '#2ecc71'] }] } });
 }
 
 function calcularVentasTotales() {
@@ -169,11 +155,20 @@ function calcularVentasTotales() {
     document.getElementById('gran-total-dinero').innerText = `$${total.toLocaleString('es-CO')}`;
 }
 
+function marketingMasivo() {
+    clientes.forEach((c, i) => {
+        setTimeout(() => {
+            const msj = `¡Hola ${c.nombre}! ✨ Tenemos nuevos productos en *Amare Beauty*. Mira nuestro catálogo aquí: https://drive.google.com/open?id=1rU759f0_bJVyNa_AM-shqBVrImPWHsOC 🌸`;
+            window.open(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`, '_blank');
+        }, i * 3000);
+    });
+}
+
 function renderTablasGestion() {
     document.getElementById('lista-gestion').innerHTML = historial.filter(h => h.metodo.includes("Fiado") || h.metodo.includes("Separado")).map(h => `
         <div class="lista-item">
             <span><strong>${h.cliente}</strong><br><small>${h.producto}</small></span>
-            <button onclick="window.location.href='https://wa.me/${CODIGO_PAIS}${h.tel}'" style="background:#25d366; color:white; border:none; padding:8px; border-radius:10px; cursor:pointer;">Cobrar</button>
+            <button onclick="window.location.href='https://wa.me/${CODIGO_PAIS}${h.tel}'" style="background:#25d366; color:white; border:none; padding:8px; border-radius:10px;">Cobrar</button>
         </div>`).join('');
 }
 
