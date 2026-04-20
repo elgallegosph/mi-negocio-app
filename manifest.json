@@ -3,8 +3,8 @@
   "short_name": "Amare",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#0B3C5D",
-  "theme_color": "#0B3C5D",
+  "background_color": "#fff0f5",
+  "theme_color": "#2c3e50",
   "icons": [
     {
       "src": "logo.png",
