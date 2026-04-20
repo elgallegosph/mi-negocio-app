@@ -158,7 +158,7 @@ function calcularVentasTotales() {
 function marketingMasivo() {
     clientes.forEach((c, i) => {
         setTimeout(() => {
-            const msj = `¡Hola ${c.nombre}! ✨ Tenemos nuevos productos en *Amare Beauty*. Mira nuestro catálogo aquí: https://drive.google.com/open?id=1rU759f0_bJVyNa_AM-shqBVrImPWHsOC 🌸`;
+            const msj = `¡Hola ${c.nombre}! ✨ Tenemos nuevos productos en *Amare Beauty*. Mira nuestro catálogo aquí: https://canva.link/6efvhh4xah3pndl 🌸`;
             window.open(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`, '_blank');
         }, i * 3000);
     });
