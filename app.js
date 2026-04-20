@@ -8,6 +8,27 @@ let clientes = [];
 let carrito = [];
 let charts = {};
 
+/**
+ * SOLUCIÓN DEFINITIVA PARA IPHONE (iOS)
+ * Safari bloquea window.open después de procesos asíncronos. 
+ * Esta función crea un elemento <a> oculto y lo activa.
+ */
+function ejecutarEnlaceWhatsApp(url) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        // Respaldo si el click falló
+        if (window.confirm("¿Abrir WhatsApp para enviar el mensaje?")) {
+            window.location.href = url;
+        }
+    }, 100);
+}
+
 async function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
@@ -41,7 +62,7 @@ function renderInventario() {
         const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
         const agotado = stockActual <= 0;
         return `
-            <div class="lista-item ${agotado ? 'sin-stock' : ''}">
+            <div class="lista-item">
                 <div><strong>${p.nombre}</strong><br><small>${agotado ? 'AGOTADO' : 'Disponibles: ' + stockActual}</small></div>
                 <div style="text-align:right">
                     <div style="color:var(--primary); font-weight:bold;">$${p.precio.toLocaleString()}</div>
@@ -89,8 +110,7 @@ async function registrarVentaMultiple() {
     const metodo = document.getElementById('metodo-pago').value;
     const totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
-    btn.disabled = true; 
-    btn.innerText = "REGISTRANDO...";
+    btn.disabled = true; btn.innerText = "REGISTRANDO...";
 
     try {
         await fetch(SCRIPT_URL, { 
@@ -100,37 +120,28 @@ async function registrarVentaMultiple() {
 
         await generarFacturaPDF(cliente, totalVenta, metodo);
 
-        let listaProductos = carrito.map(c => `✅ *${c.cantidad}x* ${c.nombre}`).join('%0A');
+        // --- MENSAJES PERSONALIZADOS ---
+        let lista = carrito.map(c => `✅ *${c.cantidad}x* ${c.nombre}`).join('%0A');
         let saludo = `¡Hola *${cliente}*! 🌸✨`;
-        let despedida = `%0A%0A¡Gracias por confiar en *Amare Beauty*! ✨💖`;
-        let mensajeWA = "";
+        let desc = `%0A%0A¡Gracias por confiar en *Amare Beauty*! 💖`;
+        let msg = "";
 
         if (metodo.includes("Transferencia") || metodo.includes("Efectivo")) {
-            mensajeWA = `${saludo}%0AConfirmamos tu compra con éxito:%0A%0A${listaProductos}%0A%0A💰 *Total pagado: $${totalVenta.toLocaleString()}*%0A📍 Tu pedido está listo.${despedida}`;
-        } 
-        else if (metodo.includes("Separado")) {
-            mensajeWA = `${saludo}%0AHe separado tus productos con mucho gusto:%0A%0A${listaProductos}%0A%0A💎 *Valor total: $${totalVenta.toLocaleString()}*%0A📌 Te avisaré apenas estén listos.${despedida}`;
-        } 
-        else if (metodo.includes("Fiado")) {
-            mensajeWA = `${saludo}%0ATu pedido a crédito ha sido registrado:%0A%0A${listaProductos}%0A%0A🧾 *Valor pendiente: $${totalVenta.toLocaleString()}*%0A🗓️ Quedo atenta a nuestra fecha acordada de pago.${despedida}`;
+            msg = `${saludo}%0AConfirmamos tu compra exitosa:%0A%0A${lista}%0A%0A💰 *Pagado: $${totalVenta.toLocaleString()}*${desc}`;
+        } else {
+            msg = `${saludo}%0ARegistramos tu pedido pendiente:%0A%0A${lista}%0A%0A🧾 *Valor a pagar: $${totalVenta.toLocaleString()}*%0A📌 Quedo atenta al pago.${desc}`;
         }
 
-        const waUrl = `https://wa.me/${CODIGO_PAIS}${tel}?text=${mensajeWA}`;
+        const waUrl = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msg}`;
 
-        // RESET DE INTERFAZ
+        // Limpieza
         carrito = [];
         actualizarCarritoUI();
-        clienteInput.value = "";
-        telInput.value = "";
-        btn.disabled = false;
-        btn.innerText = "FINALIZAR VENTA";
+        clienteInput.value = ""; telInput.value = "";
+        btn.disabled = false; btn.innerText = "FINALIZAR VENTA";
 
-        // SOLUCIÓN PARA IPHONE: Intentar ventana nueva, si falla (bloqueo iOS), usar redirección directa
         if (tel.length >= 10) {
-            const win = window.open(waUrl, '_blank');
-            if (!win || win.closed || typeof win.closed == 'undefined') {
-                window.location.href = waUrl;
-            }
+            ejecutarEnlaceWhatsApp(waUrl);
         } else {
             alert("Venta registrada con éxito.");
         }
@@ -143,25 +154,21 @@ async function generarFacturaPDF(cliente, total, metodo) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const img = await getBase64(LOGO_URL);
-
     if(img) {
         doc.setGState(new doc.GState({opacity: 0.08}));
         doc.addImage(img, 'PNG', 40, 70, 130, 130);
         doc.setGState(new doc.GState({opacity: 1}));
         doc.addImage(img, 'PNG', 15, 15, 25, 25);
     }
-    
     doc.setFont("helvetica", "bold"); doc.setTextColor(214, 51, 132); doc.setFontSize(22);
     doc.text("AMARE BEAUTY", 200, 25, {align:"right"});
     doc.setDrawColor(214, 51, 132); doc.line(15, 45, 200, 45);
     doc.setTextColor(0); doc.setFontSize(12);
     doc.text(`CLIENTE: ${cliente.toUpperCase()}`, 15, 55);
     doc.text(`MÉTODO DE PAGO: ${metodo}`, 15, 62);
-    
     let y = 80;
     doc.setFillColor(245); doc.rect(15, y, 185, 8, 'F');
     doc.text("PRODUCTO", 20, y+6); doc.text("CANT", 140, y+6); doc.text("TOTAL", 195, y+6, {align:"right"});
-    
     y += 15; doc.setFont("helvetica", "normal");
     carrito.forEach(p => {
         doc.text(p.nombre.substring(0, 35), 20, y);
@@ -169,7 +176,6 @@ async function generarFacturaPDF(cliente, total, metodo) {
         doc.text(`$${(p.precio * p.cantidad).toLocaleString()}`, 195, y, {align:"right"});
         y += 8;
     });
-
     doc.setFont("helvetica", "bold"); doc.setFontSize(16);
     doc.text(`TOTAL: $${total.toLocaleString()}`, 195, y+10, {align:"right"});
     doc.save(`Recibo_Amare_${cliente}.pdf`);
@@ -199,22 +205,17 @@ function marketingMasivo() {
     clientes.forEach((c, i) => {
         setTimeout(() => {
             const msj = `¡Hola ${c.nombre}! ✨🌸 Mira las novedades de *Amare Beauty* aquí: https://canva.link/6efvhh4xah3pndl`;
-            const waUrl = `https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`;
-            const win = window.open(waUrl, '_blank');
-            if (!win) window.location.href = waUrl;
+            ejecutarEnlaceWhatsApp(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`);
         }, i * 3500);
     });
 }
 
 function renderTablasGestion() {
-    document.getElementById('lista-gestion').innerHTML = historial.filter(h => h.metodo.includes("Fiado") || h.metodo.includes("Separado")).map(h => {
-        const waUrl = `https://wa.me/${CODIGO_PAIS}${h.tel}`;
-        return `
+    document.getElementById('lista-gestion').innerHTML = historial.filter(h => h.metodo.includes("Fiado") || h.metodo.includes("Separado")).map(h => `
         <div class="lista-item">
             <span><strong>${h.cliente}</strong><br><small>${h.producto}</small></span>
-            <button onclick="const win = window.open('${waUrl}', '_blank'); if(!win) window.location.href='${waUrl}';" 
-                    style="background:#25d366; color:white; border:none; padding:8px; border-radius:10px;">COBRAR</button>
-        </div>`}).join('');
+            <button onclick="ejecutarEnlaceWhatsApp('https://wa.me/${CODIGO_PAIS}${h.tel}')" style="background:#25d366; color:white; border:none; padding:8px; border-radius:10px;">COBRAR</button>
+        </div>`).join('');
 }
 
 window.onload = cargarDesdeDrive;
