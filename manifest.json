@@ -1,16 +1,20 @@
 {
-  "short_name": "NegocioApp",
-  "name": "Gestión de Negocio",
+  "name": "Amare Beauty",
+  "short_name": "Amare",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0B3C5D",
+  "theme_color": "#0B3C5D",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2652/2652218.png",
-      "type": "image/png",
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#2c3e50",
-  "background_color": "#ffffff"
+  ]
 }
