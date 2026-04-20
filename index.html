@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AMARE BEAUTY</title>
     
-    <meta name="theme-color" content="#2c3e50">
+    <meta name="theme-color" content="#fff0f5">
     <link rel="manifest" href="./manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Amare">
     <link rel="apple-touch-icon" href="./logo.png">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -15,7 +18,7 @@
     
     <style>
         :root { --primary: #d63384; --dark: #2c3e50; --bg: #fff0f5; }
-        body { background-color: var(--bg); margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; position: relative; overflow-x: hidden; }
+        body { background-color: var(--bg); margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; position: relative; }
         
         body::before {
             content: ""; position: fixed; top: 50%; left: 50%; width: 85vw; height: 85vw;
@@ -24,7 +27,11 @@
         }
 
         header { background: var(--dark); color: white; padding: 25px 15px 10px; text-align: center; border-radius: 0 0 40px 40px; }
-        .banner-total { background: linear-gradient(135deg, var(--primary), #ff6eb4); padding: 18px; border-radius: 20px; margin: 10px auto; width: 85%; }
+        
+        /* Letras del inicio en Rosado */
+        header h1 { color: var(--primary); margin: 0; font-size: 1.8rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+
+        .banner-total { background: linear-gradient(135deg, var(--primary), #ff6eb4); padding: 18px; border-radius: 20px; margin: 10px auto; width: 85%; color: white; }
         
         .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 15px; }
         .tabs button { padding: 12px 2px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; font-size: 0.7rem; }
@@ -34,14 +41,14 @@
         .lista-item { background: white; border-radius: 18px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(214,51,132,0.1); }
         .sin-stock { opacity: 0.5; filter: grayscale(1); }
 
-        .btn-main { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 18px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
-        .btn-sync { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .btn-main { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 18px; font-weight: bold; font-size: 1.1rem; }
+        .btn-sync { background: var(--primary); color: white; border: none; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
+        
+        #carrito-conteo { background: white; color: var(--primary); padding: 2px 7px; border-radius: 50%; font-size: 0.7rem; margin-left: 4px; font-weight: bold; }
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        input, select { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #ddd; background: white; font-size: 1rem; margin-bottom: 10px; box-sizing: border-box; }
-        #carrito-conteo { background: white; color: var(--primary); padding: 2px 7px; border-radius: 50%; font-size: 0.7rem; margin-left: 4px; font-weight: bold; }
-        
+        input, select { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #ddd; margin-bottom: 10px; box-sizing: border-box; }
         #splash-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
     </style>
 </head>
@@ -49,11 +56,11 @@
     <div id="splash-screen"><img src="./logo.png" style="width:160px;"><h2>AMARE BEAUTY</h2></div>
 
     <header>
-        <h1 style="margin:0;">AMARE BEAUTY</h1>
-        <div class="banner-total"><small>VALOR VENTAS HOY</small><h2 id="gran-total-dinero">$0</h2></div>
+        <h1>AMARE BEAUTY</h1>
+        <div class="banner-total"><small>TOTAL VENTAS HOY</small><h2 id="gran-total-dinero" style="margin:5px 0;">$0</h2></div>
         <nav class="tabs">
             <button onclick="switchTab('inventario')" id="tab-inventario" class="active">STOCK</button>
-            <button onclick="switchTab('ventas')" id="tab-ventas">CARRITO <span id="carrito-conteo">0</span></button>
+            <button onclick="switchTab('ventas')" id="tab-ventas">VENTA <span id="carrito-conteo">0</span></button>
             <button onclick="switchTab('stats')" id="tab-stats">REPORTE</button>
             <button onclick="switchTab('gestion')" id="tab-gestion">GESTIÓN</button>
         </nav>
@@ -73,8 +80,8 @@
                 <h3>🛒 Detalle Pedido</h3>
                 <div id="items-en-carrito"></div>
                 <hr>
-                <input type="text" id="nombre-cliente" placeholder="Nombre Cliente">
-                <input type="tel" id="tel-cliente" placeholder="Celular WhatsApp">
+                <input type="text" id="nombre-cliente" placeholder="Nombre del Cliente">
+                <input type="tel" id="tel-cliente" placeholder="WhatsApp (Ej: 300...)">
                 <select id="metodo-pago">
                     <option value="Efectivo">Efectivo</option>
                     <option value="Transferencia">Transferencia</option>
@@ -86,14 +93,14 @@
         </section>
 
         <section id="sec-stats" class="tab-content" style="display:none;">
-            <div class="card"><h3>📈 Métodos de Pago</h3><canvas id="canvasMetodos"></canvas></div>
+            <div class="card"><h3>📊 Distribución de Pagos</h3><canvas id="canvasMetodos"></canvas></div>
         </section>
 
         <section id="sec-gestion" class="tab-content" style="display:none;">
-            <div class="card"><h3>⚠️ Deudas Pendientes</h3><div id="lista-gestion"></div></div>
+            <div class="card"><h3>Cuentas Pendientes</h3><div id="lista-gestion"></div></div>
             <div class="card" style="background:var(--dark); text-align:center;">
                 <button onclick="window.open('https://canva.link/6efvhh4xah3pndl', '_blank')" style="background:white; color:var(--dark); width:100%; border:none; padding:12px; border-radius:12px; font-weight:bold; margin-bottom:12px;">VER CATÁLOGO</button>
-                <button onclick="marketingMasivo()" style="background:#25d366; color:white; width:100%; border:none; padding:12px; border-radius:12px; font-weight:bold;">MARKETING MASIVO</button>
+                <button onclick="marketingMasivo()" style="background:#25d366; color:white; width:100%; border:none; padding:12px; border-radius:12px; font-weight:bold;">MARKETING WHATSAPP</button>
             </div>
         </section>
     </main>
