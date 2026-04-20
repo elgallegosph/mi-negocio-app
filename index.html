@@ -13,34 +13,47 @@
     
     <style>
         :root { --primary: #d63384; --dark: #2c3e50; --bg: #fff0f5; }
-        body { background-color: var(--bg); margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; overflow-x: hidden; }
+        body { background-color: var(--bg); margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; overflow-x: hidden; position: relative; }
         
-        header { background: var(--dark); color: white; padding: 25px 15px 15px; text-align: center; border-radius: 0 0 35px 35px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .banner-total { background: linear-gradient(135deg, var(--primary), #ff6eb4); padding: 18px; border-radius: 20px; margin: 15px auto; width: 85%; }
-        
-        .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 10px; }
-        .tabs button { padding: 12px 2px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; font-size: 0.7rem; cursor: pointer; }
-        .tabs button.active { background: var(--primary) !important; transform: scale(1.05); }
+        /* MARCA DE AGUA CON TRANSPARENCIA */
+        body::before {
+            content: ""; position: fixed; top: 50%; left: 50%; width: 80vw; height: 80vw;
+            background: url('./logo.png') no-repeat center; background-size: contain;
+            transform: translate(-50%, -50%); opacity: 0.12; z-index: -1; pointer-events: none;
+        }
 
-        .card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border-radius: 25px; padding: 20px; margin: 15px; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 8px 32px rgba(0,0,0,0.05); }
-        .lista-item { background: white; border-radius: 18px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(214,51,132,0.1); }
+        header { background: var(--dark); color: white; padding: 25px 15px 10px; text-align: center; border-radius: 0 0 40px 40px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
+        .banner-total { background: linear-gradient(135deg, var(--primary), #ff6eb4); padding: 18px; border-radius: 20px; margin: 10px auto; width: 85%; }
         
-        .btn-main { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 18px; font-weight: bold; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(214,51,132,0.3); }
-        .btn-sync { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 50%; cursor: pointer; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
+        .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 15px; }
+        .tabs button { padding: 12px 2px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; font-size: 0.7rem; }
+        .tabs button.active { background: var(--primary) !important; box-shadow: 0 4px 10px rgba(214,51,132,0.4); }
+
+        .card { background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(12px); border-radius: 25px; padding: 20px; margin: 15px; border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 8px 32px rgba(0,0,0,0.05); }
+        .lista-item { background: white; border-radius: 18px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(214,51,132,0.1); }
+        .sin-stock { opacity: 0.5; filter: grayscale(1); }
+
+        .btn-main { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 18px; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(214,51,132,0.3); }
+        .btn-sync { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
         
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         input, select { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #ddd; background: white; font-size: 1rem; margin-bottom: 10px; box-sizing: border-box; }
         #carrito-conteo { background: white; color: var(--primary); padding: 2px 7px; border-radius: 50%; font-size: 0.7rem; margin-left: 4px; font-weight: bold; }
+        
+        /* COLORES AL INICIO (SPLASH) */
         #splash-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
     </style>
 </head>
 <body>
-    <div id="splash-screen"><img src="./logo.png" style="width:150px;"><h2>AMARE BEAUTY</h2></div>
+    <div id="splash-screen">
+        <img src="./logo.png" style="width:160px; filter: drop-shadow(0 0 10px rgba(214,51,132,0.3));">
+        <h2 style="color:var(--primary); margin-top:20px; letter-spacing:2px;">AMARE BEAUTY</h2>
+    </div>
 
     <header>
-        <h1 style="margin:0;">AMARE BEAUTY</h1>
+        <h1 style="margin:0; font-size:1.6rem;">AMARE BEAUTY</h1>
         <div class="banner-total"><small>TOTAL VENTAS</small><h2 id="gran-total-dinero">$0</h2></div>
         <nav class="tabs">
             <button onclick="switchTab('inventario')" id="tab-inventario" class="active">STOCK</button>
@@ -61,30 +74,30 @@
 
         <section id="sec-ventas" class="tab-content" style="display:none;">
             <div class="card">
-                <h3>🛒 Carrito Actual</h3>
+                <h3>🛒 Detalle del Carrito</h3>
                 <div id="items-en-carrito"></div>
                 <hr>
-                <input type="text" id="nombre-cliente" placeholder="Nombre Cliente">
-                <input type="tel" id="tel-cliente" placeholder="WhatsApp Celular">
+                <input type="text" id="nombre-cliente" placeholder="Nombre del Cliente">
+                <input type="tel" id="tel-cliente" placeholder="WhatsApp">
                 <select id="metodo-pago">
-                    <option value="💵 Efectivo">Efectivo</option>
-                    <option value="📲 Transferencia">Transferencia</option>
-                    <option value="⏳ Separado">Separado</option>
-                    <option value="🛑 Fiado">Fiado</option>
+                    <option value=" Efectivo">Efectivo</option>
+                    <option value=" Transferencia">Transferencia</option>
+                    <option value=" Separado">Separado</option>
+                    <option value=" Fiado">Fiado</option>
                 </select>
-                <button id="btn-procesar" onclick="registrarVentaMultiple()" class="btn-main">PROCESAR Y ENVIAR</button>
+                <button id="btn-procesar" onclick="registrarVentaMultiple()" class="btn-main">PROCESAR VENTA</button>
             </div>
         </section>
 
         <section id="sec-stats" class="tab-content" style="display:none;">
-            <div class="card"><h3 style="text-align:center;">Métodos de Pago</h3><canvas id="canvasMetodos"></canvas></div>
+            <div class="card"><h3>📊 Métodos de Pago</h3><canvas id="canvasMetodos"></canvas></div>
         </section>
 
         <section id="sec-gestion" class="tab-content" style="display:none;">
-            <div class="card"><h3>🛑 Fiados / Cobros</h3><div id="lista-gestion"></div></div>
+            <div class="card"><h3>🛑 Cobros Pendientes</h3><div id="lista-gestion"></div></div>
             <div class="card" style="background:var(--dark); text-align:center;">
                 <button onclick="window.open('https://canva.link/6efvhh4xah3pndl', '_blank')" style="background:white; color:var(--dark); width:100%; border:none; padding:12px; border-radius:12px; font-weight:bold; margin-bottom:12px;">VER CATÁLOGO</button>
-                <button onclick="marketingMasivo()" style="background:#25d366; color:white; width:100%; border:none; padding:12px; border-radius:12px; font-weight:bold;">MARKETING WHATSAPP</button>
+                <button onclick="marketingMasivo()" style="background:#25d366; color:white; width:100%; border:none; padding:12px; border-radius:12px; font-weight:bold;">MARKETING MASIVO</button>
             </div>
         </section>
     </main>
