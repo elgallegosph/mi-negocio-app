@@ -8,9 +8,20 @@ let clientes = [];
 let carrito = [];
 let charts = {};
 
+// 1. SINCRONIZACIÓN AUTOMÁTICA AL CAMBIAR DE PESTAÑA
+async function switchTab(t) {
+    document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.getElementById('sec-' + t).style.display = 'block';
+    document.getElementById('tab-' + t).classList.add('active');
+    
+    // Al navegar, refresca datos automáticamente sin que el usuario haga nada
+    await cargarDesdeDrive(); 
+    
+    if(t === 'stats') dibujarGraficos();
+}
+
 async function cargarDesdeDrive() {
-    const icon = document.getElementById('btn-sync-icon');
-    if(icon) icon.classList.add('loading');
     try {
         const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
         const data = await response.json();
@@ -21,11 +32,11 @@ async function cargarDesdeDrive() {
         renderInventario();
         renderTablasGestion();
         calcularVentasTotales();
-        if(icon) icon.classList.remove('loading');
         document.getElementById('splash-screen').style.display = 'none';
     } catch (e) { console.error(e); }
 }
 
+// 2. RENDERIZADO CON BLOQUEO ESTRICTO DE STOCK
 function renderInventario() {
     const busc = document.getElementById('busqueda').value.toLowerCase();
     const cont = document.getElementById('lista-inventario');
@@ -34,9 +45,9 @@ function renderInventario() {
         const agotado = stockActual <= 0;
         return `
             <div class="lista-item ${agotado ? 'sin-stock' : ''}">
-                <div><strong>${p.nombre}</strong><br><small>${agotado ? 'SIN DISPONIBILIDAD' : 'Stock: ' + stockActual}</small></div>
+                <div><strong>${p.nombre}</strong><br><small>${agotado ? 'PRODUCTO AGOTADO' : 'Disponibles: ' + stockActual}</small></div>
                 <div style="text-align:right">
-                    <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">$${p.precio.toLocaleString()}</div>
+                    <div style="color:var(--primary); font-weight:bold;">$${p.precio.toLocaleString()}</div>
                     <button onclick="agregarAlCarrito(${p.filaOriginal})" 
                     style="background:${agotado ? '#ccc' : 'var(--primary)'}; color:white; border:none; padding:8px 12px; border-radius:10px;"
                     ${agotado ? 'disabled' : ''}>+ Añadir</button>
@@ -70,6 +81,7 @@ function quitarDelCarrito(i) {
     actualizarCarritoUI();
 }
 
+// 3. REGISTRO Y MENSAJES DE WHATSAPP DIFERENCIADOS
 async function registrarVentaMultiple() {
     if (carrito.length === 0) return alert("El carrito está vacío");
     const btn = document.getElementById('btn-procesar');
@@ -90,13 +102,23 @@ async function registrarVentaMultiple() {
 
         if (tel.length >= 10) {
             let detalle = carrito.map(c => `• ${c.cantidad}x ${c.nombre}`).join('%0A');
-            let msj = `Hola ${cliente} 🌸, gracias por tu compra en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A✨ Factura adjunta.`;
+            let msj = "";
+
+            // Personalización según el método de pago
+            if (metodo.includes("Fiado")) {
+                msj = `Hola ${cliente} 🌸, te envío el detalle de tu compra a crédito en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total Pendiente: $${totalVenta.toLocaleString()}*%0A📌 Por favor, confírmame la fecha estimada de pago. ¡Gracias!`;
+            } else if (metodo.includes("Separado")) {
+                msj = `Hola ${cliente} 🌸, hemos separado tus productos en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Valor Separado: $${totalVenta.toLocaleString()}*%0A✨ Ya están guardados para ti. Avísanos cuando pases por ellos.`;
+            } else {
+                msj = `Hola ${cliente} 🌸, confirmamos tu compra en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A✨ ¡Muchas gracias por elegirnos!`;
+            }
+
             setTimeout(() => { window.location.href = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msj}`; }, 1200);
         } else {
             alert("Venta registrada con éxito.");
             window.location.reload();
         }
-    } catch (e) { alert("Error de red"); btn.disabled = false; }
+    } catch (e) { alert("Error al conectar con la base de datos"); btn.disabled = false; }
 }
 
 async function generarFacturaPDF(cliente, total, metodo) {
@@ -105,10 +127,10 @@ async function generarFacturaPDF(cliente, total, metodo) {
     const img = await getBase64(LOGO_URL);
 
     if(img) {
-        doc.setGState(new doc.GState({opacity: 0.08}));
+        doc.setGState(new doc.GState({opacity: 0.08})); // Marca de agua central transparente
         doc.addImage(img, 'PNG', 40, 70, 130, 130);
         doc.setGState(new doc.GState({opacity: 1}));
-        doc.addImage(img, 'PNG', 15, 15, 25, 25);
+        doc.addImage(img, 'PNG', 15, 15, 25, 25); // Logo esquina
     }
     
     doc.setFont("helvetica", "bold"); doc.setTextColor(214, 51, 132); doc.setFontSize(22);
@@ -116,11 +138,11 @@ async function generarFacturaPDF(cliente, total, metodo) {
     doc.setDrawColor(214, 51, 132); doc.line(15, 45, 200, 45);
     doc.setTextColor(0); doc.setFontSize(12);
     doc.text(`CLIENTE: ${cliente.toUpperCase()}`, 15, 55);
-    doc.text(`MÉTODO: ${metodo}`, 15, 62);
+    doc.text(`MÉTODO DE PAGO: ${metodo}`, 15, 62);
     
     let y = 80;
     doc.setFillColor(245); doc.rect(15, y, 185, 8, 'F');
-    doc.text("PRODUCTO", 20, y+6); doc.text("CANT", 140, y+6); doc.text("SUBTOTAL", 195, y+6, {align:"right"});
+    doc.text("PRODUCTO", 20, y+6); doc.text("CANT", 140, y+6); doc.text("TOTAL", 195, y+6, {align:"right"});
     
     y += 15; doc.setFont("helvetica", "normal");
     carrito.forEach(p => {
@@ -131,7 +153,7 @@ async function generarFacturaPDF(cliente, total, metodo) {
     });
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(16);
-    doc.text(`TOTAL: $${total.toLocaleString()}`, 195, y+10, {align:"right"});
+    doc.text(`VALOR TOTAL: $${total.toLocaleString()}`, 195, y+10, {align:"right"});
     doc.save(`Factura_Amare_${cliente}.pdf`);
 }
 
@@ -141,14 +163,6 @@ function getBase64(url) {
         i.onload = () => { const c=document.createElement('canvas'); c.width=i.width; c.height=i.height; c.getContext('2d').drawImage(i,0,0); r(c.toDataURL()); };
         i.src = url;
     });
-}
-
-function switchTab(t) {
-    document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
-    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-    document.getElementById('sec-' + t).style.display = 'block';
-    document.getElementById('tab-' + t).classList.add('active');
-    if(t === 'stats') dibujarGraficos();
 }
 
 function dibujarGraficos() {
@@ -166,7 +180,7 @@ function calcularVentasTotales() {
 function marketingMasivo() {
     clientes.forEach((c, i) => {
         setTimeout(() => {
-            const msj = `¡Hola ${c.nombre}! ✨ Tenemos nuevos productos en *Amare Beauty*. Mira nuestro catálogo aquí: hhttps://canva.link/6efvhh4xah3pndl`;
+            const msj = `¡Hola ${c.nombre}! ✨ Tenemos novedades en *Amare Beauty*. Mira lo nuevo aquí: https://canva.link/6efvhh4xah3pndl`;
             window.open(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`, '_blank');
         }, i * 3500);
     });
@@ -176,7 +190,7 @@ function renderTablasGestion() {
     document.getElementById('lista-gestion').innerHTML = historial.filter(h => h.metodo.includes("Fiado") || h.metodo.includes("Separado")).map(h => `
         <div class="lista-item">
             <span><strong>${h.cliente}</strong><br><small>${h.producto}</small></span>
-            <button onclick="window.location.href='https://wa.me/${CODIGO_PAIS}${h.tel}'" style="background:#25d366; color:white; border:none; padding:8px; border-radius:10px;">Cobrar</button>
+            <button onclick="window.location.href='https://wa.me/${CODIGO_PAIS}${h.tel}'" style="background:#25d366; color:white; border:none; padding:8px; border-radius:10px;">COBRAR</button>
         </div>`).join('');
 }
 
