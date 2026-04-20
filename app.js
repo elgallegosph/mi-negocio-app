@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwp45_lcFL8BSGvhG4lLthRwi3cU11Lo6m2qJDCIjRBrchO8cQjSDgCdYwZHffd8_7t/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPHxtoqdx3vCw54PgZq67aIHgGSf0Z4tSu5ByilyT-4oBlfGxDTYrmpZh9o3yIL9TdNA/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
 
@@ -30,13 +30,16 @@ function renderInventario() {
     const busc = document.getElementById('busqueda').value.toLowerCase();
     const cont = document.getElementById('lista-inventario');
     cont.innerHTML = inventario.filter(p => p.nombre.toLowerCase().includes(busc)).map(p => {
-        const stock = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        const stockActual = (parseFloat(p.stock) || 0) - (parseFloat(p.vendidos) || 0);
+        const agotado = stockActual <= 0;
         return `
-            <div class="lista-item">
-                <div><strong>${p.nombre}</strong><br><small>Disp: ${stock}</small></div>
+            <div class="lista-item ${agotado ? 'sin-stock' : ''}">
+                <div><strong>${p.nombre}</strong><br><small>${agotado ? 'SIN DISPONIBILIDAD' : 'Stock: ' + stockActual}</small></div>
                 <div style="text-align:right">
-                    <div style="color:var(--primary); font-weight:bold;">$${p.precio.toLocaleString()}</div>
-                    <button onclick="agregarAlCarrito(${p.filaOriginal})" style="background:var(--primary); color:white; border:none; padding:8px 12px; border-radius:10px; cursor:pointer;">+ Añadir</button>
+                    <div style="color:var(--primary); font-weight:bold; margin-bottom:5px;">$${p.precio.toLocaleString()}</div>
+                    <button onclick="agregarAlCarrito(${p.filaOriginal})" 
+                    style="background:${agotado ? '#ccc' : 'var(--primary)'}; color:white; border:none; padding:8px 12px; border-radius:10px;"
+                    ${agotado ? 'disabled' : ''}>+ Añadir</button>
                 </div>
             </div>`;
     }).join('');
@@ -68,14 +71,14 @@ function quitarDelCarrito(i) {
 }
 
 async function registrarVentaMultiple() {
-    if (carrito.length === 0) return alert("Carrito vacío");
+    if (carrito.length === 0) return alert("El carrito está vacío");
     const btn = document.getElementById('btn-procesar');
     const cliente = document.getElementById('nombre-cliente').value || "Cliente";
     const tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
     const metodo = document.getElementById('metodo-pago').value;
     const totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
-    btn.disabled = true; btn.innerText = "REGISTRANDO...";
+    btn.disabled = true; btn.innerText = "PROCESANDO...";
 
     try {
         await fetch(SCRIPT_URL, { 
@@ -87,13 +90,13 @@ async function registrarVentaMultiple() {
 
         if (tel.length >= 10) {
             let detalle = carrito.map(c => `• ${c.cantidad}x ${c.nombre}`).join('%0A');
-            let msj = `Hola ${cliente} 🌸, gracias por comprar en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A*Pago:* ${metodo}%0A✨ Factura adjunta.`;
-            setTimeout(() => { window.location.href = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msj}`; }, 1000);
+            let msj = `Hola ${cliente} 🌸, gracias por tu compra en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A✨ Factura adjunta.`;
+            setTimeout(() => { window.location.href = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msj}`; }, 1200);
         } else {
             alert("Venta registrada con éxito.");
             window.location.reload();
         }
-    } catch (e) { alert("Error"); btn.disabled = false; }
+    } catch (e) { alert("Error de red"); btn.disabled = false; }
 }
 
 async function generarFacturaPDF(cliente, total, metodo) {
@@ -101,7 +104,13 @@ async function generarFacturaPDF(cliente, total, metodo) {
     const doc = new jsPDF();
     const img = await getBase64(LOGO_URL);
 
-    if(img) doc.addImage(img, 'PNG', 15, 15, 25, 25);
+    if(img) {
+        doc.setGState(new doc.GState({opacity: 0.08}));
+        doc.addImage(img, 'PNG', 40, 70, 130, 130);
+        doc.setGState(new doc.GState({opacity: 1}));
+        doc.addImage(img, 'PNG', 15, 15, 25, 25);
+    }
+    
     doc.setFont("helvetica", "bold"); doc.setTextColor(214, 51, 132); doc.setFontSize(22);
     doc.text("AMARE BEAUTY", 200, 25, {align:"right"});
     doc.setDrawColor(214, 51, 132); doc.line(15, 45, 200, 45);
@@ -110,11 +119,10 @@ async function generarFacturaPDF(cliente, total, metodo) {
     doc.text(`MÉTODO: ${metodo}`, 15, 62);
     
     let y = 80;
-    doc.setFillColor(240); doc.rect(15, y, 185, 8, 'F');
+    doc.setFillColor(245); doc.rect(15, y, 185, 8, 'F');
     doc.text("PRODUCTO", 20, y+6); doc.text("CANT", 140, y+6); doc.text("SUBTOTAL", 195, y+6, {align:"right"});
     
-    y += 15;
-    doc.setFont("helvetica", "normal");
+    y += 15; doc.setFont("helvetica", "normal");
     carrito.forEach(p => {
         doc.text(p.nombre.substring(0, 35), 20, y);
         doc.text(p.cantidad.toString(), 143, y);
@@ -158,9 +166,9 @@ function calcularVentasTotales() {
 function marketingMasivo() {
     clientes.forEach((c, i) => {
         setTimeout(() => {
-            const msj = `¡Hola ${c.nombre}! ✨ Tenemos nuevos productos en *Amare Beauty*. Mira nuestro catálogo aquí: https://canva.link/6efvhh4xah3pndl 🌸`;
+            const msj = `¡Hola ${c.nombre}! ✨ Tenemos nuevos productos en *Amare Beauty*. Mira nuestro catálogo aquí: hhttps://canva.link/6efvhh4xah3pndl`;
             window.open(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`, '_blank');
-        }, i * 3000);
+        }, i * 3500);
     });
 }
 
