@@ -5,112 +5,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AMARE BEAUTY</title>
     
-    <meta name="apple-mobile-web-app-title" content="AMARE BEAUTY">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="./logo.png">
-    <link rel="icon" type="image/png" href="./logo.png">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
         :root { --primary: #d63384; --dark: #2c3e50; --bg: #fff0f5; }
-        body { background-color: var(--bg); margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; position: relative; overflow-x: hidden; }
+        body { background-color: var(--bg); margin: 0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; position: relative; }
         
-        /* Marca de agua de fondo */
         body::before {
-            content: ""; position: fixed; top: 50%; left: 50%; width: 75vw; height: 75vw; max-width: 550px;
+            content: ""; position: fixed; top: 50%; left: 50%; width: 70vw; height: 70vw;
             background: url('./logo.png') no-repeat center; background-size: contain;
-            transform: translate(-50%, -50%); opacity: 0.12; z-index: -1; pointer-events: none;
+            transform: translate(-50%, -50%); opacity: 0.1; z-index: -1; pointer-events: none;
         }
 
-        header { background: var(--dark); color: white; padding: 25px 15px 15px; text-align: center; border-radius: 0 0 35px 35px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .banner-total { background: linear-gradient(135deg, var(--primary), #ff6eb4); padding: 18px; border-radius: 20px; margin: 15px auto; width: 85%; }
+        header { background: var(--dark); color: white; padding: 25px 15px; text-align: center; border-radius: 0 0 35px 35px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .banner-total { background: linear-gradient(135deg, var(--primary), #ff6eb4); padding: 15px; border-radius: 20px; margin: 10px auto; width: 85%; }
         
-        .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 15px; }
-        .tabs button { padding: 12px 2px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; cursor: pointer; font-size: 0.7rem; transition: 0.3s; }
-        .tabs button.active { background: var(--primary) !important; transform: scale(1.05); }
+        .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 15px; }
+        .tabs button { padding: 10px 2px; border-radius: 12px; border: none; font-weight: bold; background: rgba(255,255,255,0.1); color: white; font-size: 0.7rem; cursor: pointer; }
+        .tabs button.active { background: var(--primary); transform: scale(1.05); }
 
-        .card { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); border-radius: 25px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.4); }
-        .lista-item { background: rgba(255, 255, 255, 0.65); border-radius: 18px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(214,51,132,0.1); }
-        .sin-stock { opacity: 0.5; filter: grayscale(1); }
-
-        .btn-sync { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 50%; cursor: pointer; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
-        .loading { animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        input, select { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.9); font-size: 1rem; margin-bottom: 10px; box-sizing: border-box; }
-        .btn-main { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 18px; font-weight: bold; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 10px rgba(214,51,132,0.3); }
-
+        .card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border-radius: 25px; padding: 20px; margin: 10px; border: 1px solid rgba(255,255,255,0.4); }
+        .lista-item { background: white; border-radius: 15px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
+        
+        .btn-main { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 18px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
+        input, select { width: 100%; padding: 14px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #ddd; box-sizing: border-box; font-size: 1rem; }
+        
+        #carrito-conteo { background: white; color: var(--primary); padding: 2px 7px; border-radius: 50%; font-size: 0.7rem; margin-left: 5px; font-weight: bold; }
         #splash-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
     </style>
 </head>
 <body>
-    <div id="splash-screen"><img src="./logo.png" style="width:160px;"><h2 style="color:var(--primary); margin-top:20px;">AMARE BEAUTY</h2></div>
+    <div id="splash-screen"><img src="./logo.png" style="width:150px;"><h2>AMARE BEAUTY</h2></div>
 
     <header>
-        <h1 style="margin:0; font-size:1.5rem; letter-spacing:1px;">AMARE BEAUTY</h1>
-        <div class="banner-total">
-            <small style="font-weight:300;">VENTAS TOTALES</small>
-            <h2 id="gran-total-dinero" style="margin:5px 0; font-size:1.8rem;">$0</h2>
-        </div>
+        <h1 style="margin:0;">AMARE BEAUTY</h1>
+        <div class="banner-total"><small>TOTAL VENTAS</small><h2 id="gran-total-dinero">$0</h2></div>
         <nav class="tabs">
             <button onclick="switchTab('inventario')" id="tab-inventario" class="active">STOCK</button>
-            <button onclick="switchTab('ventas')" id="tab-ventas">VENTA</button>
+            <button onclick="switchTab('ventas')" id="tab-ventas">CARRITO <span id="carrito-conteo">0</span></button>
             <button onclick="switchTab('stats')" id="tab-stats">REPORTE</button>
             <button onclick="switchTab('gestion')" id="tab-gestion">GESTIÓN</button>
         </nav>
     </header>
 
-    <main style="padding: 15px; max-width: 600px; margin: auto;">
+    <main>
         <section id="sec-inventario" class="tab-content">
-            <div style="display:flex; gap:12px; margin-bottom:15px;">
-                <input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="filtrarProductos()" style="margin:0;">
-                <button onclick="cargarDesdeDrive()" class="btn-sync" id="btn-sync-icon">🔄</button>
-            </div>
-            <div id="lista-inventario"></div>
+            <div class="card"><input type="text" id="busqueda" placeholder="Buscar producto..." onkeyup="renderInventario()"></div>
+            <div id="lista-inventario" style="padding: 10px;"></div>
         </section>
 
         <section id="sec-ventas" class="tab-content" style="display:none;">
             <div class="card">
-                <input type="text" id="busqueda-venta" placeholder="Escribe para buscar..." onkeyup="filtrarSelectVentas()">
-                <select id="select-producto" size="5" style="height: 120px;"></select>
-                <div style="display:grid; grid-template-columns: 1fr 2fr; gap:10px;">
-                    <input type="number" id="cant-venta" value="1" min="1">
-                    <select id="metodo-pago">
-                        <option value="💵 Efectivo">Efectivo</option>
-                        <option value="📲 Transferencia">Transferencia</option>
-                        <option value="⏳ Separado">Separado</option>
-                        <option value="🛑 Fiado">Fiado</option>
-                    </select>
-                </div>
-                <input type="text" id="nombre-cliente" placeholder="Nombre del cliente">
-                <input type="tel" id="tel-cliente" placeholder="WhatsApp (Ej: 3001234567)">
-                <button id="btn-procesar" onclick="registrarVenta()" class="btn-main">PROCESAR Y ENVIAR</button>
+                <h3>🛒 Productos en Carrito</h3>
+                <div id="carrito-vacio" style="text-align:center; padding:20px; color:#999;">Vacío</div>
+                <div id="items-en-carrito"></div>
+                <hr>
+                <input type="text" id="nombre-cliente" placeholder="Nombre del Cliente">
+                <input type="tel" id="tel-cliente" placeholder="WhatsApp (Ej: 300...)">
+                <select id="metodo-pago">
+                    <option value="💵 Efectivo">Efectivo</option>
+                    <option value="📲 Transferencia">Transferencia</option>
+                    <option value="⏳ Separado">Separado</option>
+                    <option value="🛑 Fiado">Fiado</option>
+                </select>
+                <button id="btn-procesar" onclick="registrarVentaMultiple()" class="btn-main">TERMINAR VENTA</button>
             </div>
         </section>
 
         <section id="sec-stats" class="tab-content" style="display:none;">
-            <div class="card">
-                <h3 style="text-align:center; color:var(--dark);">Distribución de Pagos</h3>
-                <canvas id="canvasMetodos"></canvas>
-            </div>
+            <div class="card"><h3 style="text-align:center;">Métodos de Pago</h3><canvas id="canvasMetodos"></canvas></div>
         </section>
 
         <section id="sec-gestion" class="tab-content" style="display:none;">
-            <div class="card">
-                <h3 style="color:var(--primary); margin:0 0 15px 0;">🛑 Fiados Pendientes</h3>
-                <div id="lista-fiados"></div>
-            </div>
-            <div class="card">
-                <h3 style="color:#f39c12; margin:0 0 15px 0;">⏳ Pedidos Separados</h3>
-                <div id="lista-separados"></div>
-            </div>
-            <div class="card" style="background:var(--dark); text-align:center;">
-                <button onclick="window.open('https://drive.google.com/file/d/1FMtOGvlYbLwSofqO3WCkqG4k65MSzccn/view?usp=sharing', '_blank')" style="background:white; color:var(--dark); width:100%; border:none; padding:12px; border-radius:12px; font-weight:bold; margin-bottom:12px;">VER CATÁLOGO</button>
-                <button onclick="marketingMasivo()" style="background:#25d366; color:white; width:100%; border:none; padding:12px; border-radius:12px; font-weight:bold;">MENSAJE DE MARKETING</button>
-            </div>
+            <div class="card"><h3>🛑 Deudas y Pendientes</h3><div id="lista-gestion"></div></div>
         </section>
     </main>
     <script src="app.js"></script>
