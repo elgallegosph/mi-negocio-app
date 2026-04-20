@@ -8,19 +8,20 @@ let clientes = [];
 let carrito = [];
 let charts = {};
 
+// Sincronización automática al cambiar de pestaña
 async function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
     document.getElementById('sec-' + t).style.display = 'block';
     document.getElementById('tab-' + t).classList.add('active');
     
-    // Sincronización automática al navegar
     await cargarDesdeDrive(); 
-    
     if(t === 'stats') dibujarGraficos();
 }
 
 async function cargarDesdeDrive() {
+    const icon = document.getElementById('btn-sync-icon');
+    if(icon) icon.classList.add('loading');
     try {
         const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
         const data = await response.json();
@@ -31,8 +32,9 @@ async function cargarDesdeDrive() {
         renderInventario();
         renderTablasGestion();
         calcularVentasTotales();
+        if(icon) icon.classList.remove('loading');
         document.getElementById('splash-screen').style.display = 'none';
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); if(icon) icon.classList.remove('loading'); }
 }
 
 function renderInventario() {
@@ -43,7 +45,7 @@ function renderInventario() {
         const agotado = stockActual <= 0;
         return `
             <div class="lista-item ${agotado ? 'sin-stock' : ''}">
-                <div><strong>${p.nombre}</strong><br><small>${agotado ? 'AGOTADO' : 'Stock: ' + stockActual}</small></div>
+                <div><strong>${p.nombre}</strong><br><small>${agotado ? 'SIN STOCK' : 'Stock: ' + stockActual}</small></div>
                 <div style="text-align:right">
                     <div style="color:var(--primary); font-weight:bold;">$${p.precio.toLocaleString()}</div>
                     <button onclick="agregarAlCarrito(${p.filaOriginal})" 
@@ -82,12 +84,16 @@ function quitarDelCarrito(i) {
 async function registrarVentaMultiple() {
     if (carrito.length === 0) return alert("Carrito vacío");
     const btn = document.getElementById('btn-procesar');
-    const cliente = document.getElementById('nombre-cliente').value || "Cliente";
-    const tel = document.getElementById('tel-cliente').value.replace(/\D/g, '');
+    const clienteInput = document.getElementById('nombre-cliente');
+    const telInput = document.getElementById('tel-cliente');
+    
+    const cliente = clienteInput.value || "Cliente";
+    const tel = telInput.value.replace(/\D/g, '');
     const metodo = document.getElementById('metodo-pago').value;
     const totalVenta = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
 
-    btn.disabled = true; btn.innerText = "PROCESANDO...";
+    btn.disabled = true; 
+    btn.innerText = "PROCESANDO...";
 
     try {
         await fetch(SCRIPT_URL, { 
@@ -97,24 +103,36 @@ async function registrarVentaMultiple() {
 
         await generarFacturaPDF(cliente, totalVenta, metodo);
 
-        if (tel.length >= 10) {
-            let detalle = carrito.map(c => `• ${c.cantidad}x ${c.nombre}`).join('%0A');
-            let msj = "";
-
-            if (metodo.includes("Fiado")) {
-                msj = `Hola ${cliente} 🌸, te envío el detalle de tu compra a crédito en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total Deuda: $${totalVenta.toLocaleString()}*%0A📌 Por favor confírmame la fecha de pago.`;
-            } else if (metodo.includes("Separado")) {
-                msj = `Hola ${cliente} 🌸, tus productos han sido separados en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Valor: $${totalVenta.toLocaleString()}*%0A✨ Ya están guardados para ti.`;
-            } else {
-                msj = `Hola ${cliente} 🌸, gracias por tu compra en *Amare Beauty*:%0A%0A${detalle}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A✨ ¡Disfrútalos!`;
-            }
-
-            setTimeout(() => { window.location.href = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msj}`; }, 1200);
+        // Preparamos el mensaje de WhatsApp antes de limpiar el carrito
+        let detalleWA = carrito.map(c => `• ${c.cantidad}x ${c.nombre}`).join('%0A');
+        let msjWA = "";
+        if (metodo.includes("Fiado")) {
+            msjWA = `Hola ${cliente} 🌸, detalle de tu compra a crédito en *Amare Beauty*:%0A%0A${detalleWA}%0A%0A*Deuda: $${totalVenta.toLocaleString()}*%0A📌 Pendiente fecha de pago.`;
+        } else if (metodo.includes("Separado")) {
+            msjWA = `Hola ${cliente} 🌸, productos separados en *Amare Beauty*:%0A%0A${detalleWA}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A✨ Guardados para ti.`;
         } else {
-            alert("Venta registrada.");
-            window.location.reload();
+            msjWA = `Hola ${cliente} 🌸, gracias por tu compra en *Amare Beauty*:%0A%0A${detalleWA}%0A%0A*Total: $${totalVenta.toLocaleString()}*%0A✨ ¡Disfrútalos!`;
         }
-    } catch (e) { alert("Error"); btn.disabled = false; }
+
+        // LIMPIEZA TOTAL PARA NUEVA VENTA
+        carrito = [];
+        actualizarCarritoUI();
+        clienteInput.value = "";
+        telInput.value = "";
+        btn.disabled = false;
+        btn.innerText = "PROCESAR VENTA";
+
+        if (tel.length >= 10) {
+            window.location.href = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msjWA}`;
+        } else {
+            alert("¡Venta Exitosa!");
+            switchTab('inventario');
+        }
+    } catch (e) { 
+        alert("Error de conexión"); 
+        btn.disabled = false; 
+        btn.innerText = "PROCESAR VENTA";
+    }
 }
 
 async function generarFacturaPDF(cliente, total, metodo) {
@@ -149,7 +167,7 @@ async function generarFacturaPDF(cliente, total, metodo) {
     });
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(16);
-    doc.text(`VALOR TOTAL: $${total.toLocaleString()}`, 195, y+10, {align:"right"});
+    doc.text(`TOTAL: $${total.toLocaleString()}`, 195, y+10, {align:"right"});
     doc.save(`Factura_Amare_${cliente}.pdf`);
 }
 
@@ -176,7 +194,7 @@ function calcularVentasTotales() {
 function marketingMasivo() {
     clientes.forEach((c, i) => {
         setTimeout(() => {
-            const msj = `¡Hola ${c.nombre}! ✨ Tenemos novedades en *Amare Beauty*. Mira lo nuevo aquí: https://canva.link/6efvhh4xah3pndl`;
+            const msj = `¡Hola ${c.nombre}! ✨ Mira lo nuevo en *Amare Beauty*: https://canva.link/6efvhh4xah3pndl`;
             window.open(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`, '_blank');
         }, i * 3500);
     });
