@@ -8,11 +8,6 @@ let clientes = [];
 let carrito = [];
 let charts = {};
 
-// FUNCIÓN PARA ABRIR WHATSAPP SIN VENTANAS EMERGENTES (Misma pestaña)
-function abrirWhatsAppNormal(url) {
-    window.location.href = url;
-}
-
 async function switchTab(t) {
     document.querySelectorAll('.tab-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
@@ -109,14 +104,13 @@ async function registrarVentaMultiple() {
         
         const waUrl = `https://wa.me/${CODIGO_PAIS}${tel}?text=${msg}`;
 
-        // Reset
         carrito = [];
         actualizarCarritoUI();
         clienteInput.value = ""; telInput.value = "";
         btn.disabled = false; btn.innerText = "FINALIZAR VENTA";
 
         if (tel.length >= 10) {
-            abrirWhatsAppNormal(waUrl);
+            window.location.href = waUrl;
         } else {
             alert("Venta registrada.");
             switchTab('inventario');
@@ -180,7 +174,7 @@ function marketingMasivo() {
     clientes.forEach((c, i) => {
         setTimeout(() => {
             const msj = `¡Hola ${c.nombre}! ✨🌸 Mira lo nuevo de Amare: https://canva.link/6efvhh4xah3pndl`;
-            abrirWhatsAppNormal(`https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`);
+            window.location.href = `https://wa.me/${CODIGO_PAIS}${c.tel}?text=${encodeURIComponent(msj)}`;
         }, i * 3500);
     });
 }
@@ -189,7 +183,7 @@ function renderTablasGestion() {
     document.getElementById('lista-gestion').innerHTML = historial.filter(h => h.metodo.includes("Fiado") || h.metodo.includes("Separado")).map(h => `
         <div class="lista-item">
             <span><strong>${h.cliente}</strong><br><small>${h.producto}</small></span>
-            <button onclick="abrirWhatsAppNormal('https://wa.me/${CODIGO_PAIS}${h.tel}')" style="background:#25d366; color:white; border:none; padding:8px; border-radius:10px;">COBRAR</button>
+            <button onclick="window.location.href='https://wa.me/${CODIGO_PAIS}${h.tel}'" style="background:#25d366; color:white; border:none; padding:8px; border-radius:10px;">COBRAR</button>
         </div>`).join('');
 }
 
