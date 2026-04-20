@@ -1,4 +1,4 @@
-const SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPHxtoqdx3vCw54PgZq67aIHgGSf0Z4tSu5ByilyT-4oBlfGxDTYrmpZh9o3yIL9TdNA/exec"; 
 const CODIGO_PAIS = "57";
 const LOGO_URL = "./logo.png"; 
 
