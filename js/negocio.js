@@ -1,6 +1,6 @@
 /* Reglas del negocio: ventas, inventario, caja, cartera, gastos y reportes */
 'use strict';
-
+ 
 const CONFIG_DEF = {
   nombre: 'Amare Beauty',
   nit: '', telefono: '', direccion: '', ciudad: '',
@@ -16,10 +16,10 @@ const CONFIG_DEF = {
 };
 const GASTO_MERCANCIA = 'Compra de mercancía';
 const DENOMINACIONES = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50];
-
+ 
 function cfg() { return { ...CONFIG_DEF, ...(DB.get('config', 'general') || {}) }; }
 function quien() { return (DB.user && DB.user.email) || 'demo'; }
-
+ 
 /* ---------- Productos ---------- */
 function productosActivos() { return DB.all('productos').filter(p => p.activo !== false).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')); }
 function stockDe(p) { return Number(p && p.stock) || 0; }
@@ -29,7 +29,7 @@ function estadoStock(p) {
   if (s <= min) return 'bajo';
   return 'ok';
 }
-
+ 
 async function guardarProducto(data, existente) {
   const id = existente ? existente.id : DB.newId();
   const base = {
@@ -57,7 +57,7 @@ async function guardarProducto(data, existente) {
   await DB.commit(ops);
   return id;
 }
-
+ 
 function movOp(m) {
   const id = DB.newId(); const fecha = m.fecha || new Date().toISOString();
   return {
@@ -68,7 +68,7 @@ function movOp(m) {
     },
   };
 }
-
+ 
 /* Entrada de mercancía con varias líneas; actualiza costo promedio */
 async function registrarEntrada({ lineas, proveedor, nota, pago, factura }) {
   lineas = lineas.filter(l => l.productoId && parseQty(l.cantidad) > 0);
@@ -92,7 +92,7 @@ async function registrarEntrada({ lineas, proveedor, nota, pago, factura }) {
   await DB.commit(ops);
   return { entradaId, total };
 }
-
+ 
 async function ajustarStock(p, nuevo, motivo) {
   const delta = parseQty(nuevo) - stockDe(p);
   if (!delta) return 0;
@@ -102,7 +102,7 @@ async function ajustarStock(p, nuevo, motivo) {
   ]);
   return delta;
 }
-
+ 
 async function guardarConteo(conteos) {
   const ops = []; let n = 0;
   Object.entries(conteos).forEach(([pid, val]) => {
@@ -116,7 +116,7 @@ async function guardarConteo(conteos) {
   await DB.commit(ops);
   return n;
 }
-
+ 
 /* ---------- Clientas ---------- */
 function buscarClientePorTel(tel) { const t = telLimpio(tel); if (t.length < 7) return null; return DB.all('clientes').find(c => telLimpio(c.tel) === t) || null; }
 function clienteOps(nombre, tel) {
@@ -139,14 +139,14 @@ async function guardarCliente(data, existente) {
   await DB.commit([{ t: existente ? 'update' : 'set', col: 'clientes', id, data: { nombre, tel, nota: data.nota || '', cumple: data.cumple || '', ...(existente ? {} : { creado: new Date().toISOString() }) } }]);
   return id;
 }
-
+ 
 /* ---------- Ventas ---------- */
 function totalesCarrito(cart, descuento = 0) {
   const subtotal = sum(cart, i => i.precio * i.cantidad);
   const desc = Math.min(Math.max(parseMoney(descuento), 0), subtotal);
   return { subtotal, descuento: desc, total: subtotal - desc, unidades: sum(cart, i => i.cantidad) };
 }
-
+ 
 async function registrarVenta(v) {
   const { cart } = v;
   if (!cart.length) throw new Error('El pedido está vacío.');
@@ -162,7 +162,7 @@ async function registrarVenta(v) {
   if ((tipo === 'contado' && t.total > 0 || abonoIni > 0) && !caja) throw new Error('Abre la caja antes de recibir dinero.');
   if (tipo !== 'contado' && !String(v.clienteNombre || '').trim()) throw new Error('Para fiado o separado escribe el nombre de la clienta.');
   if (tipo !== 'contado' && !telLimpio(v.clienteTel)) throw new Error('Para fiado o separado agrega el WhatsApp de la clienta, así se le puede cobrar.');
-
+ 
   const cli = clienteOps(v.clienteNombre, v.clienteTel);
   const numero = await DB.nextNumber('ventas');
   const id = DB.newId(); const fecha = new Date().toISOString();
@@ -193,12 +193,12 @@ async function registrarVenta(v) {
   await DB.commit(ops);
   return { ...venta, id };
 }
-
+ 
 function abonoOp({ venta, valor, metodo, caja, nota }) {
   const id = DB.newId(); const fecha = new Date().toISOString();
   return { t: 'set', col: 'abonos', id, data: { fecha, dia: dayKey(fecha), ventaId: venta.id, ventaNumero: venta.numero, clienteId: venta.clienteId, clienteNombre: venta.clienteNombre, valor, metodo, cajaId: caja ? caja.id : null, nota: nota || '', usuario: quien(), anulado: false } };
 }
-
+ 
 async function registrarAbono(venta, valor, metodo) {
   valor = parseMoney(valor);
   const saldo = Number(venta.saldo) || 0;
@@ -213,24 +213,25 @@ async function registrarAbono(venta, valor, metodo) {
   ]);
   return nuevoSaldo;
 }
-
+ 
 async function marcarEntregado(venta) {
   await DB.commit([{ t: 'update', col: 'ventas', id: venta.id, data: { entregado: true, fechaEntrega: new Date().toISOString() } }]);
 }
-
+ 
 /* Anular: devuelve el stock y, si el dinero entró en una caja ya cerrada, registra la devolución en la caja actual */
 async function anularVenta(venta, motivo) {
   if (venta.estado === 'anulada') return;
   const caja = cajaAbierta();
   const abonos = DB.all('abonos').filter(a => a.ventaId === venta.id && !a.anulado);
   const pagosEfectivoFuera = [];
-  if (venta.tipo === 'contado' && venta.metodo === 'Efectivo' && venta.cajaId !== (caja && caja.id)) pagosEfectivoFuera.push(venta.total);
-  abonos.forEach(a => { if (a.metodo === 'Efectivo' && a.cajaId !== (caja && caja.id)) pagosEfectivoFuera.push(a.valor); });
+  // Las ventas anteriores a la app (importadas) no movieron inventario ni caja: al anularlas tampoco se devuelve nada
+  if (!venta.migrada && venta.tipo === 'contado' && venta.metodo === 'Efectivo' && venta.cajaId !== (caja && caja.id)) pagosEfectivoFuera.push(venta.total);
+  if (!venta.migrada) abonos.forEach(a => { if (a.metodo === 'Efectivo' && a.cajaId !== (caja && caja.id)) pagosEfectivoFuera.push(a.valor); });
   const devolverEfectivo = sum(pagosEfectivoFuera);
   if (devolverEfectivo > 0 && !caja) throw new Error(`Hay que devolver ${money(devolverEfectivo)} en efectivo. Abre la caja primero.`);
   const fecha = new Date().toISOString();
   const ops = [{ t: 'update', col: 'ventas', id: venta.id, data: { estado: 'anulada', saldo: 0, anuladaFecha: fecha, motivoAnulacion: motivo || '', anuladaPor: quien() } }];
-  venta.items.forEach(i => {
+  if (!venta.migrada) venta.items.forEach(i => {
     if (DB.get('productos', i.productoId)) ops.push({ t: 'update', col: 'productos', id: i.productoId, data: { stock: { $inc: i.cantidad } } });
     ops.push(movOp({ productoId: i.productoId, nombre: i.nombre, tipo: 'anulacion', cantidad: i.cantidad, costoUnit: i.costo, ref: venta.id, refNumero: venta.numero, nota: motivo || 'Venta anulada', fecha }));
   });
@@ -239,7 +240,7 @@ async function anularVenta(venta, motivo) {
   await DB.commit(ops);
   return devolverEfectivo;
 }
-
+ 
 /* ---------- Gastos ---------- */
 function gastoOp({ categoria, descripcion, valor, metodo, proveedor, ref, fecha }) {
   const caja = cajaAbierta();
@@ -252,7 +253,7 @@ async function registrarGasto(g) {
   await DB.commit([gastoOp(g)]);
 }
 async function anularGasto(g) { await DB.commit([{ t: 'update', col: 'gastos', id: g.id, data: { anulado: true } }]); }
-
+ 
 /* ---------- Caja ---------- */
 function cajaAbierta() { return DB.all('cajas').find(c => c.abierta) || null; }
 function cajasCerradas() { return DB.all('cajas').filter(c => !c.abierta).sort((a, b) => b.cierre.localeCompare(a.cierre)); }
@@ -271,7 +272,7 @@ async function movimientoCaja(tipo, valor, motivo) {
   if (parseMoney(valor) <= 0) throw new Error('Escribe el valor.');
   await DB.commit([cajaMovOp({ tipo, valor, motivo, caja })]);
 }
-
+ 
 function resumenCaja(caja) {
   const id = caja.id;
   const ventas = DB.all('ventas').filter(v => v.cajaId === id);
@@ -303,7 +304,7 @@ function resumenCaja(caja) {
     ventas, abonos, gastos, movs,
   };
 }
-
+ 
 async function cerrarCaja(caja, { contado, detalle, baseSiguiente, nota }) {
   const r = resumenCaja(caja);
   const c = parseMoney(contado);
@@ -321,11 +322,11 @@ async function cerrarCaja(caja, { contado, detalle, baseSiguiente, nota }) {
   } }]);
   return { ...caja, abierta: false, cierre: fecha, contado: c, esperado: r.esperado, diferencia: c - r.esperado, resumen, baseSiguiente: parseMoney(baseSiguiente), notaCierre: nota || '' };
 }
-
+ 
 /* ---------- Cartera ---------- */
 function ventasConSaldo() { return DB.all('ventas').filter(v => v.estado !== 'anulada' && (Number(v.saldo) || 0) > 0).sort((a, b) => a.fecha.localeCompare(b.fecha)); }
 function separadosPorEntregar() { return DB.all('ventas').filter(v => v.tipo === 'separado' && v.estado !== 'anulada' && !v.entregado); }
-
+ 
 /* ---------- Reportes ---------- */
 function rangoPeriodo(clave, desde, hasta) {
   const hoy = new Date(); const k = dayKey(hoy);
@@ -342,7 +343,7 @@ function rangoPeriodo(clave, desde, hasta) {
   }
 }
 const enRango = (dia, r) => dia >= r.desde && dia <= r.hasta;
-
+ 
 function reporte(r) {
   const ventas = DB.all('ventas').filter(v => enRango(v.dia, r) && v.estado !== 'anulada');
   const anuladas = DB.all('ventas').filter(v => enRango(v.dia, r) && v.estado === 'anulada');
@@ -354,15 +355,15 @@ function reporte(r) {
   const compras = gastos.filter(g => g.categoria === GASTO_MERCANCIA);
   const utilidadBruta = facturado - costo;
   const totalGastosOp = sum(gastosOp, g => g.valor);
-
+ 
   const recaudo = {};
   ventas.filter(v => v.tipo === 'contado').forEach(v => recaudo[v.metodo] = (recaudo[v.metodo] || 0) + v.total);
   abonos.forEach(a => recaudo[a.metodo] = (recaudo[a.metodo] || 0) + a.valor);
-
+ 
   const porDia = new Map();
   for (let d = parseDay(r.desde < '2000' ? (ventas.map(v => v.dia).sort()[0] || dayKey()) : r.desde); dayKey(d) <= r.hasta && porDia.size < 400; d = addDays(d, 1)) porDia.set(dayKey(d), { ventas: 0, ganancia: 0, n: 0 });
   ventas.forEach(v => { const x = porDia.get(v.dia); if (x) { x.ventas += v.total; x.ganancia += v.total - (v.costoTotal || 0); x.n++; } });
-
+ 
   const prod = new Map(); const cat = new Map();
   ventas.forEach(v => {
     const factor = v.subtotal ? v.total / v.subtotal : 1; // reparte el descuento
@@ -376,7 +377,7 @@ function reporte(r) {
   });
   const gastosCat = {};
   gastos.forEach(g => gastosCat[g.categoria] = (gastosCat[g.categoria] || 0) + g.valor);
-
+ 
   return {
     ventas, anuladas, abonos, gastos,
     facturado, costo, utilidadBruta, margen: facturado ? utilidadBruta / facturado : 0,
@@ -391,7 +392,7 @@ function reporte(r) {
     gastosCat: Object.entries(gastosCat).sort((a, b) => b[1] - a[1]),
   };
 }
-
+ 
 function valorInventario() {
   const ps = productosActivos();
   return {
@@ -403,3 +404,4 @@ function valorInventario() {
     bajos: ps.filter(p => estadoStock(p) === 'bajo'),
   };
 }
+ 
