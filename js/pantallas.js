@@ -717,6 +717,7 @@ Pantallas.ajustes = {
           <label class="btn ghost block file-btn">${icon('upload')}Restaurar copia de seguridad<input type="file" accept=".json" data-ch="restaurar" hidden></label>
           <button class="btn ghost block" data-a="importarProductos">${icon('upload')}Importar productos desde Excel</button>
           <button class="btn ghost block" data-a="importarClientas">${icon('upload')}Importar clientas desde Excel</button>
+          <button class="btn ghost block" data-a="importarVentas">${icon('upload')}Importar ventas anteriores desde Excel</button>
         </div></section>
  
       <section class="card"><h2>Cuenta</h2>
@@ -819,7 +820,7 @@ Acciones.deudaAnterior = () => {
           const tipo = $('#da-tipo', body).value;
           const f = new Date(parseDay($('#da-fec', body).value || dayKey())); f.setHours(12, 0, 0, 0); const fecha = f.toISOString();
           const numero = await DB.nextNumber('ventas'); const id = DB.newId();
-          const items = [{ productoId: 'ant-' + (x ? x.id : DB.newId()), nombre: nombreItem, categoria: x ? x.categoria : 'Otros', cantidad: 1, precio: total, costo: x ? Number(x.costo) || 0 : 0 }];
+          const items = [{ productoId: x ? x.id : 'ant-' + DB.newId(), nombre: nombreItem, categoria: x ? x.categoria : 'Otros', cantidad: 1, precio: total, costo: x ? Number(x.costo) || 0 : 0 }];
           const venta = { numero, fecha, dia: dayKey(fecha), tipo, items, subtotal: total, descuento: 0, total, costoTotal: items[0].costo, metodo: abonado ? 'Anterior' : '', abonado, saldo: total - abonado, estado: total - abonado > 0 ? 'pendiente' : 'pagada', entregado: tipo !== 'separado', clienteId: cli.id, clienteNombre: cli.nombre || nombre, clienteTel: cli.tel || telLimpio($('#da-tel', body).value), recibido: null, cambio: null, cajaId: null, nota: 'Deuda anterior a la app', usuario: quien(), migrada: true };
           const ops = [...cli.ops, { t: 'set', col: 'ventas', id, data: venta }];
           if (abonado) ops.push({ t: 'set', col: 'abonos', id: DB.newId(), data: { fecha, dia: dayKey(fecha), ventaId: id, ventaNumero: numero, clienteId: cli.id, clienteNombre: venta.clienteNombre, valor: abonado, metodo: 'Anterior', cajaId: null, nota: 'Abonado antes de la app', usuario: quien(), anulado: false } });
@@ -830,6 +831,97 @@ Acciones.deudaAnterior = () => {
         toast('Deuda registrada');
         if (otra) { sel.value = ''; $('#da-desc-f', body).hidden = false; ['#da-desc', '#da-val', '#da-ab'].forEach(s => $(s, body).value = ''); }
         else close();
+      };
+    },
+  });
+};
+ 
+/* Ventas de antes de usar la app: cuentan en reportes y cartera, pero no mueven inventario ni caja */
+function fechaCelda(v) {
+  if (typeof v === 'number' && v > 20000) { const d = new Date(Math.round((v - 25569) * 864e5)); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12); }
+  if (v instanceof Date) return new Date(v.getFullYear(), v.getMonth(), v.getDate(), 12);
+  const s = String(v || '').trim(); let m;
+  if ((m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/))) return new Date(Number(m[3].length === 2 ? '20' + m[3] : m[3]), Number(m[2]) - 1, Number(m[1]), 12);
+  if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
+  return null;
+}
+function hashTexto(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return h.toString(36); }
+function prepararVentasAnteriores(filas) {
+  const listas = [], errores = []; const vistos = {};
+  filas.forEach((f, i) => {
+    const filaN = i + 2;
+    const cod = String(campo(f, 'codigo', 'sku', 'referencia')).trim();
+    const nom = String(campo(f, 'producto', 'nombre')).trim();
+    const cant = parseQty(campo(f, 'cantidad', 'unidades'));
+    if (!cod && !nom) return;
+    if (!cant) return;
+    const fecha = fechaCelda(campo(f, 'fecha'));
+    if (!fecha) { errores.push(`Fila ${filaN}: falta la fecha`); return; }
+    const p = (cod && productoPorCodigo(cod)) || productosActivos().find(x => norm(x.nombre) === norm(nom)) || null;
+    const precio = parseMoney(campo(f, 'preciounitario', 'precio')) || (p ? Number(p.precio) || 0 : 0);
+    if (!precio) { errores.push(`Fila ${filaN}: falta el precio`); return; }
+    const debe = norm(campo(f, 'estado')).startsWith('debe');
+    const cli = String(campo(f, 'clienta', 'cliente', 'nombrecliente')).trim();
+    const tel = telLimpio(campo(f, 'telefono', 'tel', 'whatsapp'));
+    if (debe && !cli) { errores.push(`Fila ${filaN} (${nom || cod}): dice "Debe" pero no tiene clienta`); return; }
+    const clave = [dayKey(fecha), cod, nom, cant, precio, debe, cli].join('|');
+    vistos[clave] = (vistos[clave] || 0) + 1;
+    listas.push({ id: 'hist-' + hashTexto(clave + '#' + vistos[clave]), fecha, p, nombre: p ? p.nombre : nom, cant, precio, debe, cli, tel,
+      metodo: String(campo(f, 'mediodepago', 'metodo', 'medio')).trim() || 'No registrado', nota: String(campo(f, 'nota')).trim() });
+  });
+  listas.sort((a, b) => a.fecha - b.fecha);
+  return { listas, errores };
+}
+async function guardarVentasAnteriores(listas) {
+  const ops = []; const clientes = {};
+  listas.forEach((v, i) => {
+    let cliId = null, cliNombre = v.cli, cliTel = v.tel;
+    if (v.cli || v.tel) {
+      const k = v.tel || norm(v.cli);
+      if (clientes[k]) ({ id: cliId, nombre: cliNombre, tel: cliTel } = clientes[k]);
+      else { const c = clienteOps(v.cli, v.tel); ops.push(...c.ops); clientes[k] = { id: c.id, nombre: c.nombre || v.cli, tel: c.tel || v.tel }; ({ id: cliId, nombre: cliNombre, tel: cliTel } = clientes[k]); }
+    }
+    const total = v.cant * v.precio; const costo = v.p ? (Number(v.p.costo) || 0) : 0; const fecha = v.fecha.toISOString();
+    ops.push({ t: 'set', col: 'ventas', id: v.id, data: {
+      numero: 'H' + (i + 1), fecha, dia: dayKey(v.fecha), tipo: v.debe ? 'fiado' : 'contado',
+      items: [{ productoId: v.p ? v.p.id : 'ant-' + hashTexto(v.nombre), nombre: v.nombre, categoria: v.p ? v.p.categoria : 'Otros', cantidad: v.cant, precio: v.precio, costo }],
+      subtotal: total, descuento: 0, total, costoTotal: costo * v.cant, metodo: v.debe ? '' : v.metodo,
+      abonado: v.debe ? 0 : total, saldo: v.debe ? total : 0, estado: v.debe ? 'pendiente' : 'pagada', entregado: true,
+      clienteId: cliId, clienteNombre: cliNombre || '', clienteTel: cliTel || '', recibido: null, cambio: null, cajaId: null,
+      nota: ['Venta anterior a la app', v.nota].filter(Boolean).join(' · '), usuario: quien(), migrada: true,
+    } });
+  });
+  await DB.commit(ops);
+  return listas.length;
+}
+Acciones.importarVentas = () => {
+  Modal.open(`<div class="form">
+    <p>Sube el Excel de ventas anteriores (columnas <b>Fecha, Código, Producto, Cantidad, Precio unitario, Medio de pago, Estado, Clienta, Teléfono</b>).</p>
+    <p class="hint">Estas ventas cuentan en reportes y en "Por cobrar", pero no descuentan inventario ni entran a la caja. Si subes el mismo archivo dos veces, las ventas se reemplazan en vez de duplicarse.</p>
+    <div class="field"><label for="iv-file">Archivo</label><input id="iv-file" type="file" accept=".xlsx,.xls,.csv"></div>
+    <div id="iv-prev"></div>
+    <button class="btn primary block" id="iv-go" disabled>Importar ventas</button></div>`, {
+    title: 'Ventas anteriores',
+    onOpen(body, close) {
+      let datos = null;
+      $('#iv-file', body).onchange = async e => {
+        const f = e.target.files[0]; if (!f) return;
+        const filas = await run(() => leerHoja(f)); if (!filas) return;
+        datos = prepararVentasAnteriores(filas);
+        const L = datos.listas; const sinProd = L.filter(v => !v.p).length; const deben = L.filter(v => v.debe);
+        $('#iv-prev', body).innerHTML = `<div class="dl">
+          ${filaDato('Ventas', `<b class="num">${L.length}</b>`)}${filaDato('Unidades', `<span class="num">${num(sum(L, v => v.cant))}</span>`)}
+          ${filaDato('Total vendido', `<b class="num">${money(sum(L, v => v.cant * v.precio))}</b>`)}
+          ${L.length ? filaDato('Fechas', `${fmtFecha(L[0].fecha)} a ${fmtFecha(L[L.length - 1].fecha)}`) : ''}
+          ${filaDato('Fiados pendientes', `<span class="num">${deben.length} · ${money(sum(deben, v => v.cant * v.precio))}</span>`)}
+          ${sinProd ? filaDato('Sin producto en el inventario', `<span class="warn-text num">${sinProd}</span>`) : ''}</div>
+          ${datos.errores.length ? `<div class="notice warn">${icon('alert')}<span><b>${datos.errores.length} filas no se importan:</b><br>${datos.errores.slice(0, 8).map(esc).join('<br>')}${datos.errores.length > 8 ? '<br>…' : ''}</span></div>` : ''}`;
+        $('#iv-go', body).disabled = !L.length;
+      };
+      $('#iv-go', body).onclick = async () => {
+        if (!(await requireAdmin())) return;
+        const n = await run(() => guardarVentasAnteriores(datos.listas));
+        if (n !== undefined) { toast(`${n} ventas anteriores importadas`); close(); }
       };
     },
   });
