@@ -1,7 +1,7 @@
 /* Permite abrir la app sin internet. Los datos sin conexión los maneja Firebase por su cuenta. */
-const VERSION = 'amare-v2.1.0';
+const VERSION = 'amare-v2.3.0';
 const APP = ['./', 'index.html', 'styles.css', 'manifest.json', 'logo-sm.png', 'icon-192.png',
-  'js/firebase-config.js', 'js/util.js', 'js/db.js', 'js/negocio.js', 'js/documentos.js', 'js/demo.js', 'js/app.js', 'js/pantallas.js', 'js/codigos.js', 'js/main.js'];
+  'js/firebase-config.js', 'js/util.js', 'js/db.js', 'js/negocio.js', 'js/documentos.js', 'js/demo.js', 'js/app.js', 'js/pantallas.js', 'js/codigos.js', 'js/recibos.js', 'js/balance.js', 'js/main.js'];
 const EXTERNOS = ['https://cdnjs.cloudflare.com/', 'https://www.gstatic.com/firebasejs/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/'];
 
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP)).then(() => self.skipWaiting())); });
