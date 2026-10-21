@@ -1,6 +1,6 @@
 /* Pantallas: Inventario, Caja, Ventas, Clientas, Gastos, Reportes, Ajustes, Más */
 'use strict';
- 
+
 /* =================== INVENTARIO =================== */
 Pantallas.inventario = {
   titulo: 'Inventario',
@@ -48,7 +48,7 @@ function invProductos() {
 }
 INPUTS.invBuscar = el => { App.s.inv.q = el.value; $('#inv-list').innerHTML = invListaHTML(); };
 Acciones.invCat = el => { App.s.inv.cat = el.value; App.render(); };
- 
+
 function invEntradas() {
   const movs = DB.all('movimientos').filter(m => m.tipo === 'entrada');
   const grupos = Array.from(groupBy(movs, m => m.ref || m.id).values()).map(g => ({ fecha: g[0].fecha, proveedor: g[0].proveedor, nota: g[0].nota, items: g, total: sum(g, m => m.cantidad * (m.costoUnit || 0)), unidades: sum(g, m => m.cantidad) })).sort((a, b) => b.fecha.localeCompare(a.fecha));
@@ -59,7 +59,7 @@ function invEntradas() {
       <span class="item-end">${admin ? `<span class="num strong">${money(g.total)}</span>` : ''}${icon('chevron', 'sm rot')}</span></summary>
       <div class="det-body">${g.items.map(m => filaDato(`${esc(m.productoNombre)} <small>× ${num(m.cantidad)}</small>`, admin ? `<span class="num">${money(m.costoUnit)} c/u</span>` : '')).join('')}</div></details>`).join('')}</div>`;
 }
- 
+
 const TIPOS_MOV = { inicial: 'Stock inicial', entrada: 'Entrada', venta: 'Venta', separado: 'Separado', ajuste: 'Ajuste', anulacion: 'Anulación' };
 function movRow(m) {
   const pos = m.cantidad > 0;
@@ -97,7 +97,7 @@ Acciones.guardarConteo = async () => {
   const n = await run(() => guardarConteo(App.s.inv.conteo));
   if (n !== undefined) { App.s.inv.conteo = {}; toast(`Conteo guardado: ${n} productos ajustados`); App.render(); }
 };
- 
+
 /* Producto: crear / editar / ver */
 Acciones.nuevoProducto = () => formProducto(null);
 function formProducto(p, pre = {}) {
@@ -186,7 +186,7 @@ Acciones.ajustarProducto = async el => {
     },
   });
 };
- 
+
 /* Entrada de mercancía */
 Acciones.nuevaEntrada = el => {
   const c = cfg(); const ps = productosActivos(); const admin = App.puedeVer();
@@ -254,7 +254,7 @@ Acciones.nuevaEntrada = el => {
     },
   });
 };
- 
+
 /* Importar productos */
 Acciones.importarProductos = () => {
   Modal.open(`<div class="form">
@@ -286,7 +286,7 @@ Acciones.plantilla = () => run(async () => entregarArchivo(await plantillaProduc
 Acciones.exportarInventario = () => run(async () => entregarArchivo(await libroExcel({
   Inventario: productosActivos().map(p => ({ Código: p.codigo, Producto: p.nombre, Categoría: p.categoria, Precio: p.precio, ...(App.puedeVer() ? { Costo: p.costo } : {}), Stock: p.stock, 'Stock mínimo': p.stockMin, Estado: estadoStock(p) })),
 }), `inventario-${dayKey()}.xlsx`));
- 
+
 /* =================== CAJA =================== */
 Pantallas.caja = {
   titulo: 'Caja',
@@ -348,7 +348,7 @@ Pantallas.caja = {
   },
 };
 function difPill(d) { d = Number(d) || 0; return d === 0 ? pill('Cuadró', 'ok') : d > 0 ? pill('Sobró ' + money(d), 'warn') : pill('Faltó ' + money(-d), 'bad'); }
- 
+
 Acciones.cajaMov = el => {
   const t = el.dataset.t;
   Modal.open(`<form id="cm-form" class="form">
@@ -363,7 +363,7 @@ Acciones.cajaMov = el => {
     },
   });
 };
- 
+
 Acciones.cerrarCaja = () => {
   const caja = cajaAbierta(); if (!caja) return;
   const r = resumenCaja(caja);
@@ -435,7 +435,7 @@ function mostrarCierre(c, recien) {
 }
 Acciones.cierrePDF = el => { const c = DB.get('cajas', el.dataset.id); run(async () => entregarArchivo(await cierrePDF(c), `Cierre-caja-${dayKey(c.apertura)}.pdf`, { compartir: !!el.dataset.share })); };
 Acciones.copiar = el => copiarTexto(el.dataset.t);
- 
+
 /* =================== VENTAS =================== */
 Pantallas.ventas = {
   titulo: 'Ventas',
@@ -465,7 +465,7 @@ Pantallas.ventas = {
 };
 INPUTS.ventasBuscar = debounce(el => { App.s.ventas.q = el.value; const pos = el.selectionStart; App.render(); const n = $('#v-q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch { } }, 250);
 Acciones.ventasTipo = el => { App.s.ventas.tipo = el.value; App.render(); };
- 
+
 /* =================== CLIENTAS Y CARTERA =================== */
 Pantallas.clientes = {
   titulo: 'Clientas y cartera',
@@ -500,7 +500,7 @@ function cliLista() {
     <div class="row-btns end"><button class="btn ghost sm" data-a="importarClientas">${icon('upload')}Importar desde Excel</button></div>`;
 }
 INPUTS.cliBuscar = el => { App.s.cli.q = el.value; $('#cli-list').innerHTML = cliListaHTML(); };
- 
+
 function cliCartera() {
   const vs = ventasConSaldo(); const total = sum(vs, v => v.saldo);
   const grupos = Array.from(groupBy(vs, v => v.clienteId || v.clienteNombre).values()).map(l => ({ nombre: l[0].clienteNombre, tel: l[0].clienteTel, ventas: l, saldo: sum(l, v => v.saldo), dias: diasDesde(l[0].fecha) })).sort((a, b) => b.dias - a.dias);
@@ -514,9 +514,10 @@ function cliCartera() {
       <span class="item-main"><span class="item-title">${esc(g.nombre)}</span><span class="item-sub">${g.ventas.length} ${g.ventas.length === 1 ? 'cuenta' : 'cuentas'} · la más antigua hace ${g.dias} días</span></span>
       <span class="item-end"><span class="num strong">${money(g.saldo)}</span>${g.dias > 30 ? pill(g.dias + ' días', 'bad') : g.dias > 15 ? pill(g.dias + ' días', 'warn') : ''}</span></summary>
       <div class="det-body">${g.ventas.map(v => `<div class="cart-row"><button class="link-btn" data-a="verVenta" data-id="${v.id}">#${esc(v.numero)} · ${v.tipo === 'separado' ? 'Separado' : 'Fiado'} · ${fmtFecha(v.fecha)}</button><span class="num">${money(v.saldo)}</span><button class="btn sm primary" data-a="abonar" data-id="${v.id}">Abonar</button></div>`).join('')}
-      ${g.tel ? `<a class="btn wa sm" href="${esc(waLink(g.tel, textoCobroWhatsApp(g.nombre, g.ventas), cfg().codigoPais))}" target="_blank" rel="noopener">${icon('whatsapp')}Enviar recordatorio</a>` : ''}</div></details>`).join('')}</div>`;
+      <div class="row-btns">${g.ventas[0].clienteId ? `<button class="btn ghost sm" data-a="pdf" data-tipo="cuenta" data-id="${g.ventas[0].clienteId}" data-modo="${puedeCompartirArchivos() ? 'share' : 'download'}">${icon(puedeCompartirArchivos() ? 'share' : 'download')}Estado de cuenta PDF</button>` : ''}
+      ${g.tel ? `<a class="btn wa sm" href="${esc(waLink(g.tel, textoCobroWhatsApp(g.nombre, g.ventas), cfg().codigoPais))}" target="_blank" rel="noopener">${icon('whatsapp')}Recordatorio</a>` : ''}</div></div></details>`).join('')}</div>`;
 }
- 
+
 function cliDifusion() {
   const s = App.s.cli; const c = cfg();
   if (!s.msg) s.msg = c.mensajeDifusion;
@@ -534,7 +535,7 @@ INPUTS.difMsg = debounce(el => { App.s.cli.msg = el.value; $$('[data-a="difEnvia
 Acciones.difEnviado = el => { App.s.cli.enviados[el.dataset.id] = true; setTimeout(() => App.render(), 400); };
 Acciones.difReset = () => { App.s.cli.enviados = {}; App.render(); };
 Acciones.exportarContactos = () => run(async () => entregarArchivo(await libroExcel({ Contactos: DB.all('clientes').filter(c => c.tel).map(c => ({ Nombre: c.nombre, Teléfono: '+' + (telLimpio(c.tel).length === 10 ? cfg().codigoPais : '') + telLimpio(c.tel) })) }), 'contactos-clientas.xlsx'));
- 
+
 Acciones.nuevaClienta = () => formClienta(null);
 function formClienta(c) {
   Modal.open(`<form id="cl-form" class="form">
@@ -563,7 +564,8 @@ Acciones.verClienta = el => {
     ${c.nota ? `<p class="notice">${icon('edit')}<span>${esc(c.nota)}</span></p>` : ''}
     <div class="row-btns wrap">${c.tel ? `<a class="btn wa" href="${esc(waLink(c.tel, saldo > 0 ? textoCobroWhatsApp(c.nombre, validas.filter(v => v.saldo > 0)) : '', cf.codigoPais))}" target="_blank" rel="noopener">${icon('whatsapp')}${saldo > 0 ? 'Cobrar' : 'Escribir'}</a>` : ''}
       <button class="btn ghost" data-a="editarClienta" data-id="${c.id}">${icon('edit')}Editar</button>
-      <button class="btn ghost" data-a="venderA" data-id="${c.id}">${icon('cart')}Venderle</button></div>
+      <button class="btn ghost" data-a="venderA" data-id="${c.id}">${icon('cart')}Venderle</button>
+      ${saldo > 0 ? `<button class="btn ghost" data-a="pdf" data-tipo="cuenta" data-id="${c.id}" data-modo="${puedeCompartirArchivos() ? 'share' : 'download'}">${icon('receipt')}Estado de cuenta</button>` : ''}</div>
     <h4>Compras</h4>${vs.length ? `<div class="list compact">${vs.map(ventaRow).join('')}</div>` : '<p class="muted-text">Sin compras.</p>'}
   </div>`, { title: 'Clienta' });
 };
@@ -576,7 +578,7 @@ Acciones.importarClientas = () => {
     onOpen(body, close) { $('#ic-file', body).onchange = async e => { const f = e.target.files[0]; if (!f) return; const filas = await run(() => leerHoja(f)); if (!filas) return; const n = await run(() => importarClientes(filas)); if (n !== undefined) { toast(`${n} clientas importadas`); close(); } }; },
   });
 };
- 
+
 /* =================== GASTOS =================== */
 Pantallas.gastos = {
   titulo: 'Gastos',
@@ -622,7 +624,7 @@ Acciones.anularGasto = async el => {
   const g = DB.get('gastos', el.dataset.id);
   if (await confirmar(`¿Anular el gasto "${g.descripcion || g.categoria}" por ${money(g.valor)}?`, { si: 'Anular', peligro: true })) run(() => anularGasto(g), 'Gasto anulado');
 };
- 
+
 /* =================== REPORTES =================== */
 Pantallas.reportes = {
   titulo: 'Reportes',
@@ -633,7 +635,7 @@ Pantallas.reportes = {
       <div class="toolbar">${chips('rep', 'periodo', [{ v: 'hoy', l: 'Hoy' }, { v: '7d', l: '7 días' }, { v: 'mes', l: 'Este mes' }, { v: 'mesAnt', l: 'Mes anterior' }, { v: 'anio', l: 'Este año' }, { v: 'custom', l: 'Elegir fechas' }], s.periodo)}
         ${s.periodo === 'custom' ? `<div class="toolbar-row"><input type="date" value="${esc(s.desde || dayKey())}" data-ch="repDesde" aria-label="Desde"><span>a</span><input type="date" value="${esc(s.hasta || dayKey())}" data-ch="repHasta" aria-label="Hasta"></div>` : ''}</div>
       <div class="rep-head"><h2>${esc(rg.nombre)}</h2><button class="btn ghost sm" data-a="exportarExcel">${icon('download')}Exportar a Excel</button></div>
- 
+
       <section class="pyg card">
         <div class="pyg-row"><span>Ventas</span><span class="num">${money(r.facturado)}</span></div>
         <div class="pyg-row minus"><span>Costo de los productos vendidos</span><span class="num">−${money(r.costo)}</span></div>
@@ -641,26 +643,26 @@ Pantallas.reportes = {
         <div class="pyg-row minus"><span>Gastos del negocio</span><span class="num">−${money(r.gastosOp)}</span></div>
         <div class="pyg-row total ${r.utilidadNeta < 0 ? 'neg' : ''}"><span>Ganancia neta</span><span class="num">${money(r.utilidadNeta)}</span></div>
       </section>
- 
+
       <section class="kpis">
         <div class="kpi"><span class="kpi-l">Ventas</span><span class="kpi-v num">${num(r.numVentas)}</span><span class="kpi-s">${num(r.unidades)} unidades${r.anuladas.length ? ` · ${r.anuladas.length} anuladas` : ''}</span></div>
         <div class="kpi"><span class="kpi-l">Ticket promedio</span><span class="kpi-v num">${money(r.ticket)}</span></div>
         <div class="kpi"><span class="kpi-l">Dinero recibido</span><span class="kpi-v num">${money(r.totalRecaudo)}</span><span class="kpi-s">Incluye abonos de cuentas viejas</span></div>
         <div class="kpi"><span class="kpi-l">Vendido a crédito</span><span class="kpi-v num">${money(r.credito)}</span><span class="kpi-s">Hoy te deben ${money(porCobrar)} en total</span></div>
       </section>
- 
+
       <section class="card"><div class="card-head"><h2>Ventas por día</h2></div>
         ${r.porDia.length > 1 ? barras(r.porDia.map(x => ({ l: String(parseDay(x.dia).getDate()), v: x.ventas, hoy: x.dia === dayKey(), t: `${fmtFecha(parseDay(x.dia))}: ${money(x.ventas)} · ${x.n} ventas` })), { alto: 170 }) : `<p class="muted-text">Elige un periodo de más de un día para ver la gráfica.</p>`}</section>
- 
+
       <div class="cols">
         <section class="card"><div class="card-head"><h2>Dinero recibido por medio</h2></div>${r.totalRecaudo ? barrasH(Object.entries(r.recaudo).sort((a, b) => b[1] - a[1]).map(([l, v]) => ({ l, v, extra: Math.round(v / r.totalRecaudo * 100) + '%' }))) : '<p class="muted-text">Sin pagos.</p>'}</section>
         <section class="card"><div class="card-head"><h2>Por categoría</h2></div>${r.categorias.length ? barrasH(r.categorias.map(c => ({ l: c.nombre, v: c.valor, extra: `${num(c.cantidad)} und.` }))) : '<p class="muted-text">Sin ventas.</p>'}</section>
       </div>
- 
+
       <section class="card"><div class="card-head"><h2>Productos más vendidos</h2></div>
         ${r.topProductos.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Producto</th><th class="r">Und.</th><th class="r">Ventas</th><th class="r">Ganancia</th></tr></thead><tbody>
         ${r.topProductos.slice(0, 15).map(p => `<tr><td>${esc(p.nombre)}</td><td class="r num">${num(p.cantidad)}</td><td class="r num">${money(p.valor)}</td><td class="r num">${money(p.ganancia)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted-text">Sin ventas.</p>'}</section>
- 
+
       <div class="cols">
         <section class="card"><div class="card-head"><h2>Gastos</h2><span class="num muted-text">${money(sum(r.gastos, g => g.valor))}</span></div>${r.gastosCat.length ? barrasH(r.gastosCat.map(([l, v]) => ({ l, v }))) : '<p class="muted-text">Sin gastos.</p>'}</section>
         <section class="card"><div class="card-head"><h2>Inventario hoy</h2></div><div class="dl">
@@ -678,7 +680,7 @@ Pantallas.reportes = {
 Acciones.repDesde = el => { App.s.rep.desde = el.value; App.render(); };
 Acciones.repHasta = el => { App.s.rep.hasta = el.value; App.render(); };
 Acciones.exportarExcel = () => { const s = App.s.rep; const rg = rangoPeriodo(s.periodo, s.desde, s.hasta); run(async () => entregarArchivo(await exportarExcel(rg), `${cfg().nombre.replace(/\s+/g, '-')}-${rg.desde}-a-${rg.hasta}.xlsx`), 'Excel generado'); };
- 
+
 /* =================== AJUSTES =================== */
 Pantallas.ajustes = {
   titulo: 'Ajustes',
@@ -709,7 +711,7 @@ Pantallas.ajustes = {
         <p class="hint">Con PIN, quien no lo sepa (por ejemplo una vendedora) puede vender, recibir abonos y cerrar caja, pero no ve costos ni ganancias, no anula ventas ni cambia ajustes.</p>
         <button class="btn primary block" type="submit">Guardar ajustes</button>
       </form>
- 
+
       <section class="card"><h2>Respaldo y archivos</h2>
         <div class="stack">
           <button class="btn ghost block" data-a="exportarTodo">${icon('download')}Exportar todo a Excel</button>
@@ -719,7 +721,7 @@ Pantallas.ajustes = {
           <button class="btn ghost block" data-a="importarClientas">${icon('upload')}Importar clientas desde Excel</button>
           <button class="btn ghost block" data-a="importarVentas">${icon('upload')}Importar ventas anteriores desde Excel</button>
         </div></section>
- 
+
       <section class="card"><h2>Cuenta</h2>
         ${demo ? `<p class="muted-text">Estás en modo demo, sin cuenta.</p>
           <div class="stack"><button class="btn ghost block" data-a="demoReset">Volver a cargar datos de ejemplo</button><button class="btn danger-ghost block" data-a="demoVaciar">Empezar en blanco (borrar todo)</button></div>`
@@ -757,7 +759,7 @@ Acciones.restaurar = async el => {
 Acciones.demoReset = async () => { if (await confirmar('Se borran los datos de este navegador y se cargan los de ejemplo.', { si: 'Recargar ejemplo' })) { DB.resetDemo(); sembrarDemo(); App.go('inicio'); App.render(); toast('Datos de ejemplo cargados'); } };
 Acciones.demoVaciar = async () => { if (await confirmar('Se borra todo lo guardado en este navegador y la app queda vacía.', { si: 'Borrar todo', peligro: true })) { DB.resetDemo(); DB._commitDemo([{ t: 'set', col: 'config', id: 'general', data: { ...CONFIG_DEF } }]); App.go('inicio'); App.render(); toast('App en blanco'); } };
 Acciones.salir = async () => { if (await confirmar('¿Cerrar sesión en este dispositivo?', { si: 'Cerrar sesión' })) await DB.logout(); };
- 
+
 /* =================== MÁS (móvil) =================== */
 Pantallas.mas = {
   titulo: 'Más',
@@ -767,6 +769,7 @@ Pantallas.mas = {
       { id: 'ventas', i: 'receipt', t: 'Ventas', s: 'Historial, recibos y anulaciones' },
       { id: 'clientes', i: 'users', t: 'Clientas y cartera', s: porCobrar ? `Te deben ${money(porCobrar)}` : 'Clientas, cobros y difusión' },
       { id: 'gastos', i: 'wallet', t: 'Gastos', s: 'Arriendo, servicios, transporte…' },
+      { id: 'balance', i: 'trend', t: 'Balance general', s: 'Ganancia acumulada, inversión, mes a mes', lock: true },
       { id: 'reportes', i: 'chart', t: 'Reportes', s: 'Ganancias, productos estrella, Excel', lock: true },
       { id: 'ajustes', i: 'settings', t: 'Ajustes', s: 'Datos del negocio, PIN, respaldo', lock: true },
     ];
@@ -777,7 +780,7 @@ Pantallas.mas = {
     </div></div>`;
   },
 };
- 
+
 /* Deudas que venían de antes de usar la app: quedan en la cartera sin mover inventario ni caja */
 Acciones.deudaAnterior = () => {
   const ps = productosActivos(); const clientes = DB.all('clientes').sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -835,7 +838,7 @@ Acciones.deudaAnterior = () => {
     },
   });
 };
- 
+
 /* Ventas de antes de usar la app: cuentan en reportes y cartera, pero no mueven inventario ni caja */
 function fechaCelda(v) {
   if (typeof v === 'number' && v > 20000) { const d = new Date(Math.round((v - 25569) * 864e5)); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12); }
@@ -926,4 +929,3 @@ Acciones.importarVentas = () => {
     },
   });
 };
- 
