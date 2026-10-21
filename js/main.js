@@ -101,7 +101,7 @@ async function boot() {
   DB.onAuth(user => {
     if (!user) { pantallaLogin(); return; }
     if (DB.mode === 'demo' && !DB.demoSeeded) { sembrarDemo(); DB.demoSeeded = true; }
-    montarShell(); rutaDesdeHash(); App.render();
+    montarShell(); rutaDesdeHash(); App.render(); precargarPDF();
     if (!suscrito) { suscrito = true; DB.onChange(() => App.onData()); }
   });
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.SIN_SW) {
