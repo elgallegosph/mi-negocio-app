@@ -428,7 +428,6 @@ Acciones.coMetodo = Acciones.coTipo;
 Acciones.coRecibido = el => { App.s.pos.recibido = num(el.dataset.v); const i = $('#co-rec'); if (i) i.value = App.s.pos.recibido; coTotales(); };
 
 function ventaExitosa(v) {
-  const c = cfg();
   Modal.open(`<div class="success">
     <div class="success-ic">${icon('check')}</div>
     <h3>Venta #${esc(v.numero)} registrada</h3>
@@ -436,9 +435,8 @@ function ventaExitosa(v) {
     ${v.cambio ? `<p class="cambio">Cambio: <b class="num">${money(v.cambio)}</b></p>` : ''}
     ${v.tipo !== 'contado' ? `<p class="muted-text">Saldo pendiente: <b class="num">${money(v.saldo)}</b></p>` : ''}
     <div class="stack">
-      ${v.clienteTel ? `<a class="btn wa block" href="${esc(waLink(v.clienteTel, textoReciboWhatsApp(v), c.codigoPais))}" target="_blank" rel="noopener">${icon('whatsapp')}Enviar recibo por WhatsApp</a>` : ''}
-      <button class="btn ghost block" data-a="ventaPDF" data-id="${v.id}" data-share="1">${icon('share')}Compartir recibo en PDF</button>
-      <button class="btn primary block" data-a="cerrarModal">Nueva venta</button>
+      ${botonesPDF('recibo', v.id, { etiqueta: 'recibo', tel: v.clienteTel, textoWA: textoReciboWhatsApp(v) })}
+      <button class="btn ghost block" data-a="cerrarModal">${icon('cart')}Nueva venta</button>
     </div></div>`, { title: 'Listo' });
 }
 
@@ -460,14 +458,13 @@ function verVenta(id) {
       ${App.puedeVer() ? filaDato('Ganancia', `<span class="num">${money(gan)}</span>`, 'muted') : ''}
       ${v.tipo === 'contado' ? filaDato('Pagó con', esc(v.metodo) + (v.recibido ? ` · recibido ${money(v.recibido)}, cambio ${money(v.cambio)}` : '')) : ''}
     </div>
-    ${v.tipo !== 'contado' ? `<h4>Abonos</h4>${abonos.length ? `<div class="list compact">${abonos.map(a => `<div class="item ${a.anulado ? 'tachado' : ''}"><span class="item-main"><span class="item-title num">${money(a.valor)}</span><span class="item-sub">${fmtFechaHora(a.fecha)} · ${esc(a.metodo)}${a.nota ? ' · ' + esc(a.nota) : ''}</span></span></div>`).join('')}</div>` : '<p class="muted-text">Sin abonos todavía.</p>'}
+    ${v.tipo !== 'contado' ? `<h4>Abonos</h4>${abonos.length ? `<div class="list compact">${abonos.map(a => `<div class="item ${a.anulado ? 'tachado' : ''}"><span class="item-main"><span class="item-title num">${money(a.valor)}</span><span class="item-sub">${fmtFechaHora(a.fecha)} · ${esc(a.metodo)}${a.nota ? ' · ' + esc(a.nota) : ''}</span></span>${a.anulado ? '' : `<span class="item-end"><button class="btn ghost sm" data-a="pdf" data-tipo="abono" data-id="${a.id}" data-modo="${puedeCompartirArchivos() ? 'share' : 'download'}">${icon(puedeCompartirArchivos() ? 'share' : 'download')}Comprobante</button></span>`}</div>`).join('')}</div>` : '<p class="muted-text">Sin abonos todavía.</p>'}
       ${filaDato('Saldo pendiente', `<b class="num">${money(v.saldo || 0)}</b>`, 'total')}` : ''}
     ${v.nota ? `<p class="muted-text">Nota: ${esc(v.nota)}</p>` : ''}
     <div class="stack">
       ${v.estado !== 'anulada' && v.saldo > 0 ? `<button class="btn primary block" data-a="abonar" data-id="${v.id}">${icon('cash')}Registrar abono</button>` : ''}
       ${v.estado !== 'anulada' && v.tipo === 'separado' && !v.entregado ? `<button class="btn ${v.saldo > 0 ? 'ghost' : 'primary'} block" data-a="entregar" data-id="${v.id}">${icon('bag')}Marcar como entregado</button>` : ''}
-      ${v.clienteTel ? `<a class="btn wa block" href="${esc(waLink(v.clienteTel, v.saldo > 0 ? textoCobroWhatsApp(v.clienteNombre, [v]) : textoReciboWhatsApp(v), c.codigoPais))}" target="_blank" rel="noopener">${icon('whatsapp')}${v.saldo > 0 ? 'Recordar saldo por WhatsApp' : 'Enviar recibo por WhatsApp'}</a>` : ''}
-      <div class="row-btns"><button class="btn ghost" data-a="ventaPDF" data-id="${v.id}" data-share="1">${icon('share')}Compartir PDF</button><button class="btn ghost" data-a="ventaPDF" data-id="${v.id}">${icon('download')}Descargar</button></div>
+      ${botonesPDF('recibo', v.id, { etiqueta: 'recibo', tel: v.clienteTel, textoWA: v.saldo > 0 ? textoCobroWhatsApp(v.clienteNombre, [v]) : textoReciboWhatsApp(v) })}
       ${v.estado !== 'anulada' ? `<button class="btn danger-ghost block" data-a="anular" data-id="${v.id}">${icon('ban')}Anular venta</button>` : ''}
     </div>
     <p class="fine">Registrada por ${esc(v.usuario || '')}</p>
@@ -518,17 +515,17 @@ function abonar(id) {
       $$('#ab-met .chip', body).forEach(b => b.onclick = () => { metodo = b.dataset.m; $$('#ab-met .chip', body).forEach(x => x.classList.toggle('on', x === b)); });
       $('#ab-form', body).onsubmit = async e => {
         e.preventDefault();
-        const saldo = await run(() => registrarAbono(v, $('#ab-val', body).value, metodo));
-        if (saldo === undefined) return;
+        const r = await run(() => registrarAbono(v, $('#ab-val', body).value, metodo));
+        if (r === undefined) return;
+        const saldo = r.saldo;
         close(); Modal.stack.length && Modal.closeTop();
-        const vv = DB.get('ventas', v.id) || v;
-        Modal.open(`<div class="success"><div class="success-ic">${icon('check')}</div><h3>Abono registrado</h3>
+        Modal.open(`<div class="success"><div class="success-ic">${icon('check')}</div><h3>Pago registrado</h3>
+          <p class="num big">${money(parseMoney($('#ab-val', body).value))}</p>
           <p class="muted-text">${saldo > 0 ? `Saldo pendiente: <b class="num">${money(saldo)}</b>` : '¡Cuenta saldada!'}</p>
           ${saldo <= 0 && v.tipo === 'separado' && !v.entregado ? `<p class="notice accent">${icon('bag')}<span>El separado ya está pago. Puedes entregar el producto.</span></p><button class="btn primary block" data-a="entregar" data-id="${v.id}">Marcar como entregado</button>` : ''}
-          <div class="stack">${v.clienteTel ? `<a class="btn wa block" href="${esc(waLink(v.clienteTel, `¡Hola ${v.clienteNombre.split(' ')[0]}! Recibimos tu abono a la cuenta #${v.numero} en ${c.nombre}. ${saldo > 0 ? 'Saldo pendiente: ' + money(saldo) + '.' : 'Tu cuenta quedó a paz y salvo. ¡Gracias!'}`, c.codigoPais))}" target="_blank" rel="noopener">${icon('whatsapp')}Avisar por WhatsApp</a>` : ''}
-          <button class="btn ghost block" data-a="ventaPDF" data-id="${v.id}" data-share="1">${icon('share')}Compartir recibo actualizado</button>
-          <button class="btn primary block" data-a="cerrarModal">Listo</button></div></div>`, { title: 'Listo' });
-        void vv;
+          <div class="stack">
+            ${botonesPDF('abono', r.abonoId, { etiqueta: 'comprobante', tel: v.clienteTel, textoWA: `¡Hola ${String(v.clienteNombre || '').split(' ')[0]}! Recibimos tu pago a la cuenta #${v.numero} en ${c.nombre}. ${saldo > 0 ? 'Saldo pendiente: ' + money(saldo) + '.' : 'Tu cuenta quedó a paz y salvo. ¡Gracias!'}` })}
+            <button class="btn ghost block" data-a="cerrarModal">Listo</button></div></div>`, { title: 'Listo' });
       };
     },
   });
