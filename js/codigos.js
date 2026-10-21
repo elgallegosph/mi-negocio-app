@@ -1,8 +1,8 @@
 /* Códigos de barras: escáner con la cámara, lectores USB/Bluetooth, códigos internos y etiquetas */
 'use strict';
- 
+
 LIBS.scan = ['https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js', () => window.Html5Qrcode];
- 
+
 /* ---------- EAN-13 ---------- */
 function eanDigito(doce) {
   let s = 0; for (let i = 0; i < 12; i++) s += Number(doce[i]) * (i % 2 ? 3 : 1);
@@ -27,7 +27,7 @@ function productoPorCodigo(code) {
   const n = normCodigo(code); if (!n) return null;
   return productosActivos().find(p => p.codigo && normCodigo(p.codigo) === n) || null;
 }
- 
+
 /* ---------- Pitido y vibración al leer ---------- */
 let _audio;
 function pitido(ok = true) {
@@ -39,7 +39,7 @@ function pitido(ok = true) {
   } catch { }
   try { navigator.vibrate && navigator.vibrate(ok ? 50 : [60, 60, 60]); } catch { }
 }
- 
+
 /* ---------- Despacho de códigos leídos ----------
    Cada ventana que quiera recibir códigos se registra con Escaner.usar(fn). Si no hay ninguna,
    el código va a la pantalla actual (Vender agrega al pedido, Inventario abre el producto, Conteo suma). */
@@ -52,7 +52,7 @@ const Escaner = {
     return fn(code);
   },
 };
- 
+
 function escaneoPorRuta(code) {
   if (App.ruta === 'vender') return posAgregarCodigo(code);
   if (App.ruta === 'inventario' && App.s.inv.tab === 'conteo') return conteoSumar(code);
@@ -62,7 +62,7 @@ function escaneoPorRuta(code) {
   ofrecerCrear(code);
   return { ok: false, msg: 'Código nuevo' };
 }
- 
+
 function posAgregarCodigo(code) {
   const p = productoPorCodigo(code);
   if (!p) { ofrecerCrear(code); return { ok: false, msg: `El código ${code} no está registrado` }; }
@@ -76,7 +76,7 @@ function agregarAlPedido(p) {
   const t = totalesCarrito(cart, App.s.pos.descuento);
   return { ok: true, msg: `${p.nombre} · ${money(p.precio)}`, sub: `Pedido: ${t.unidades} und. · ${money(t.total)}` };
 }
- 
+
 function conteoSumar(code) {
   const p = productoPorCodigo(code);
   if (!p) return { ok: false, msg: `El código ${code} no está registrado` };
@@ -84,14 +84,14 @@ function conteoSumar(code) {
   if (!Modal.isOpen() || $('#scan-view')) { const inp = $(`.conteo input[data-id="${p.id}"]`); if (inp) { inp.value = c[p.id]; INPUTS.conteoCampo(inp); } else App.render(); }
   return { ok: true, msg: `${p.nombre}: ${c[p.id]} contados`, sub: `En la app: ${num(stockDe(p))}` };
 }
- 
+
 async function ofrecerCrear(code) {
   if (await confirmar(`El código ${code} no pertenece a ningún producto. ¿Quieres crear el producto con este código?`, { titulo: 'Código nuevo', si: 'Crear producto', no: 'Ahora no' })) {
     while (Modal.isOpen()) Modal.closeTop();
     formProducto(null, { codigo: code });
   }
 }
- 
+
 /* ---------- Lectores USB / Bluetooth (funcionan como un teclado muy rápido) ---------- */
 (function lectorTeclado() {
   let buf = '', t0 = 0, last = 0, el = null, val = '';
@@ -116,12 +116,12 @@ async function ofrecerCrear(code) {
     buf += e.key; last = now;
   }, true);
 })();
- 
+
 function avisoLectura(r) {
   if (!r) return;
   Promise.resolve(r).then(x => { if (!x) return; pitido(x.ok); if (!$('#scan-view')) toast(x.msg, x.ok ? 'ok' : 'warn', 2200); });
 }
- 
+
 /* ---------- Escáner con la cámara ---------- */
 function abrirEscaner({ titulo = 'Escanear código', continuo = false, ayuda = '', alLeer }) {
   let lector = null, ultimo = '', ultimoT = 0, cerrado = false, quitar = null;
@@ -195,7 +195,7 @@ function abrirEscaner({ titulo = 'Escanear código', continuo = false, ayuda = '
     }
   }
 }
- 
+
 /* Acciones de escaneo de cada pantalla */
 Acciones.scanVender = () => abrirEscaner({ titulo: 'Escanear para vender', continuo: true, ayuda: 'Cada producto que escanees se suma al pedido.', alLeer: posAgregarCodigo });
 Acciones.scanInventario = () => abrirEscaner({ titulo: 'Buscar por código', alLeer: code => {
@@ -204,7 +204,7 @@ Acciones.scanInventario = () => abrirEscaner({ titulo: 'Buscar por código', alL
   setTimeout(() => verProducto(p.id), 300); return { ok: true, msg: p.nombre };
 } });
 Acciones.scanConteo = () => abrirEscaner({ titulo: 'Contar con la cámara', continuo: true, ayuda: 'Escanea cada unidad una por una. Cada lectura suma 1.', alLeer: conteoSumar });
- 
+
 /* ---------- Etiquetas con código de barras (PDF) ---------- */
 const EAN_L = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011'];
 const EAN_G = ['0100111', '0110011', '0011011', '0100001', '0011101', '0111001', '0000101', '0010001', '0001001', '0010111'];
@@ -233,7 +233,7 @@ function dibujarEAN(doc, code, x, y, w, h) {
   doc.text(code.slice(1, 7), x + (quiet + 3 + 21) * mod, ty, { align: 'center' });
   doc.text(code.slice(7), x + (quiet + 50 + 21) * mod, ty, { align: 'center' });
 }
- 
+
 const FORMATOS_ETIQUETA = {
   carta: { nombre: 'Hoja carta · 30 etiquetas (3 × 10)', pagina: 'letter', cols: 3, filas: 10, w: 66.7, h: 25.4, mx: 4.8, my: 12.7, gx: 3.2, gy: 0 },
   rollo: { nombre: 'Rollo térmico 50 × 25 mm', pagina: [50, 25], cols: 1, filas: 1, w: 50, h: 25, mx: 0, my: 0, gx: 0, gy: 0 },
@@ -261,7 +261,7 @@ async function etiquetasPDF(lista, formato) {
   });
   return doc.output('blob');
 }
- 
+
 Acciones.etiquetas = el => {
   const preId = el && el.dataset && el.dataset.id;
   const ps = productosActivos();
@@ -302,4 +302,3 @@ Acciones.etiquetas = el => {
     },
   });
 };
- 
