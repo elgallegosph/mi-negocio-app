@@ -194,24 +194,34 @@ function bindMoneyInputs(root) {
 }
 
 /* Descarga o comparte un archivo */
-async function entregarArchivo(blob, nombre, { compartir = false, titulo = '' } = {}) {
+async function entregarArchivo(blob, nombre, { compartir = false, titulo = '', texto = '' } = {}) {
+  blob = blob.type ? blob : new Blob([blob], { type: 'application/pdf' });
   if (compartir && navigator.canShare) {
     try {
       const file = new File([blob], nombre, { type: blob.type });
-      if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: titulo || nombre }); return true; }
-    } catch (e) { if (e && e.name === 'AbortError') return false; }
+      if (navigator.canShare({ files: [file] })) {
+        const datos = { files: [file], title: titulo || nombre };
+        if (texto) datos.text = texto;
+        await navigator.share(datos); return 'compartido';
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return false; // la persona cerró el menú de compartir
+      console.warn('No se pudo compartir, se descarga', e);
+    }
   }
   if (window.claude && typeof window.claude.use === 'function') { // vista previa dentro de Claude
     const dl = await window.claude.use('downloads').catch(() => null);
     if (dl) {
-      try { await dl.save({ filename: nombre, data: blob }); return true; }
+      try { await dl.save({ filename: nombre, data: blob }); return 'descargado'; }
       catch (e) { if (e && e.code !== 'declined') toast('No se pudo descargar el archivo aquí.', 'warn'); return false; }
     }
   }
   const url = URL.createObjectURL(blob);
+  const iosApp = /iPhone|iPad|iPod/.test(navigator.userAgent) && (navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+  if (iosApp) { window.open(url, '_blank'); setTimeout(() => URL.revokeObjectURL(url), 60000); return 'descargado'; }
   const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-  return true;
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
+  return 'descargado';
 }
 
 async function copiarTexto(t) {
